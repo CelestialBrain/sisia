@@ -1,1 +1,31 @@
 project_id = "uleyusmamwpubkurhkll"
+
+[functions.import-curriculum]
+verify_jwt = true
+
+[functions.import-schedules]
+verify_jwt = true
+
+[functions.admin-purge]
+verify_jwt = true
+
+[functions.validate-data]
+verify_jwt = true
+
+[functions.api-courses]
+verify_jwt = false
+
+[functions.api-schedules]
+verify_jwt = false
+
+[functions.api-programs]
+verify_jwt = false
+
+[functions.api-curriculum]
+verify_jwt = false
+
+[functions.api-stats]
+verify_jwt = false
+
+[functions.api-public-programs]
+verify_jwt = false
