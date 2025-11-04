@@ -1,0 +1,66 @@
+-- Create schedule_palette_items table
+CREATE TABLE IF NOT EXISTS public.schedule_palette_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  schedule_id uuid REFERENCES user_schedules(id) ON DELETE CASCADE NOT NULL,
+  course_code text NOT NULL,
+  course_title text NOT NULL,
+  section text,
+  required_count integer NOT NULL DEFAULT 1,
+  placed_count integer NOT NULL DEFAULT 0,
+  is_manual boolean DEFAULT false,
+  color text DEFAULT '#93C5FD',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.schedule_palette_items ENABLE ROW LEVEL SECURITY;
+
+-- RLS policy for palette items
+CREATE POLICY "Users can manage own palette items"
+ON public.schedule_palette_items
+FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM user_schedules
+    WHERE user_schedules.id = schedule_palette_items.schedule_id
+    AND user_schedules.user_id = auth.uid()
+  )
+);
+
+-- Add palette_item_id to schedule_blocks
+ALTER TABLE public.schedule_blocks
+ADD COLUMN IF NOT EXISTS palette_item_id uuid REFERENCES schedule_palette_items(id) ON DELETE SET NULL;
+
+-- Create schedule_share_codes table
+CREATE TABLE IF NOT EXISTS public.schedule_share_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text UNIQUE NOT NULL,
+  schedule_id uuid REFERENCES user_schedules(id) ON DELETE CASCADE NOT NULL,
+  schedule_data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  expires_at timestamptz DEFAULT (now() + interval '30 days')
+);
+
+-- Enable RLS
+ALTER TABLE public.schedule_share_codes ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for share codes
+CREATE POLICY "Anyone can read valid share codes"
+ON public.schedule_share_codes
+FOR SELECT
+USING (expires_at > now());
+
+CREATE POLICY "Users can create share codes for own schedules"
+ON public.schedule_share_codes
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM user_schedules
+    WHERE user_schedules.id = schedule_share_codes.schedule_id
+    AND user_schedules.user_id = auth.uid()
+  )
+);
+
+-- Create index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_schedule_share_codes_code ON public.schedule_share_codes(code);
+CREATE INDEX IF NOT EXISTS idx_schedule_palette_items_schedule_id ON public.schedule_palette_items(schedule_id);
