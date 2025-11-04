@@ -6,71 +6,136 @@
 All colors MUST be HSL.
 */
 
+/* Fluid typography using clamp() with container queries */
+.fluid-hiramin {
+  font-size: 8rem; /* Stay at max size by default */
+  line-height: 1;
+}
+
+/* Only start shrinking below 480px container width */
+@container (max-width: 32rem) {
+  .fluid-hiramin {
+    font-size: clamp(1.75rem, -4rem + 44.64cqw, 8rem);
+  }
+}
+
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 15%;
+    --logo-spacing: -0.05em;
+    /* Dynamic Theme Colors */
+    --primary-h: 228;
+    --primary-s: 74%;
+    --primary-l: 30%;
+
+    --background: 0 0% 100%;
+    --foreground: 220 90% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 15%;
+    --card-foreground: 220 90% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    --popover-foreground: 220 90% 8%;
 
-    --primary: 0 0% 10%;
-    --primary-foreground: 0 0% 98%;
+    --primary: var(--primary-h) var(--primary-s) var(--primary-l);
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 90% 8%;
 
-    --muted: 0 0% 92%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 15% 88%;
-    --accent-foreground: 0 0% 15%;
+    --accent: var(--primary-h) calc(var(--primary-s) * 0.3) 95%;
+    --accent-foreground: var(--primary-h) var(--primary-s) 20%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 20%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: var(--primary-h) var(--primary-s) var(--primary-l);
 
-    --radius: 0.75rem;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
 
+    --radius: 0.5rem;
+
+    /* Ateneo Blue custom tokens */
+    --ateneo-blue: var(--primary-h) var(--primary-s) var(--primary-l);
+    --ateneo-blue-light: 228 74% 40%;
+    --ateneo-blue-lighter: 228 74% 90%;
+    --ateneo-blue-dark: 228 74% 20%;
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Chart colors */
+    --chart-1: var(--primary-h) var(--primary-s) var(--primary-l);
+    --chart-2: 200 90% 45%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 84% 60%;
   }
 
   .dark {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 95%;
+    --background: 220 26% 14%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 26% 14%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 26% 14%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 95%;
-    --primary-foreground: 0 0% 10%;
+    --primary: var(--primary-h) var(--primary-s) var(--primary-l);
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 17% 20%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 220 17% 20%;
+    --muted-foreground: 220 9% 65%;
 
-    --accent: 210 15% 20%;
-    --accent-foreground: 0 0% 95%;
+    --accent: var(--primary-h) calc(var(--primary-s) * 0.3) 15%;
+    --accent-foreground: var(--primary-h) var(--primary-s) 90%;
 
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 80%;
+    --border: 220 17% 20%;
+    --input: 220 17% 20%;
+    --ring: var(--primary-h) var(--primary-s) var(--primary-l);
+
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+
+    --ateneo-blue: var(--primary-h) var(--primary-s) var(--primary-l);
+    --ateneo-blue-light: 228 74% 55%;
+    --ateneo-blue-lighter: 228 74% 25%;
+    --ateneo-blue-dark: 228 74% 35%;
+    
+    --chart-1: var(--primary-h) var(--primary-s) var(--primary-l);
+    --chart-2: 200 90% 55%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 62% 31%;
   }
 }
+
+@keyframes slow-pulse-bg {
+  0%,
+  100% {
+    background-color: hsl(var(--primary) / 0.05);
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.2);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.1);
+    box-shadow: 0 0 25px hsl(var(--primary) / 0.35);
+  }
+}
+
+.animate-slow-pulse-bg {
+  animation: slow-pulse-bg 2.5s ease-in-out infinite;
+}
+
 
 @layer base {
   * {
@@ -79,12 +144,174 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "liga" 1, "calt" 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    
+    .transition,
+    .animate {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+
+  /* Overlay Scrollbars - No Layout Shift */
   
-  h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tight;
+  /* Root: overlay by default, no gutter reserved */
+  html,
+  body {
+    overflow-y: auto;       /* Let OS decide when to show */
+    overscroll-behavior-y: none; /* Prevent rubber-band scroll and pull-to-refresh */
   }
+
+  /* Prevent Radix UI from adding padding when scroll is locked (causes layout shift) */
+  /* Neutralize react-remove-scroll compensation without disabling lock */
+  html[data-scroll-locked],
+  html[data-scroll-locked] body,
+  body[data-scroll-locked] {
+    --removed-body-scroll-bar-size: 0px !important;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Force scrollbar to always be present (overlay) to prevent appear/disappear shifts */
+  html, body, #root {
+    min-height: 100dvh;
+  }
+
+  body {
+    overflow-x: clip; /* Prevent horizontal scrollbars */
+  }
+
+  /* Tiny overflow keeps scrollbar present without layout impact */
+  body::after {
+    content: "";
+    display: block;
+    height: 1px;
+  }
+
+  /* Firefox: thin overlay scrollbars (works on all devices) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: hsl(var(--primary) / 0.4) transparent;
+  }
+
+  /* WebKit Overlay Mode - ONLY on hover-capable devices */
+  @media (hover: hover) {
+    html[data-scrollbar="overlay"]::-webkit-scrollbar {
+      width: 8px; /* Thin but visible */
+      height: 8px;
+    }
+
+    html[data-scrollbar="overlay"]::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    html[data-scrollbar="overlay"]::-webkit-scrollbar-thumb {
+      background: hsl(var(--primary) / 0.3);
+      border-radius: 9999px;
+    }
+
+    html[data-scrollbar="overlay"]::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary) / 0.5);
+    }
+
+    /* Dark mode overlay */
+    .dark html[data-scrollbar="overlay"]::-webkit-scrollbar-thumb {
+      background: hsl(var(--primary) / 0.4);
+    }
+
+    .dark html[data-scrollbar="overlay"]::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary) / 0.6);
+    }
+  }
+
+  /* Classic Scrollbar Mode - stable width, no hover changes */
+  html[data-scrollbar="classic"] {
+  }
+
+  html[data-scrollbar="classic"]::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  html[data-scrollbar="classic"]:hover::-webkit-scrollbar {
+    width: 12px; /* Keep same width on hover */
+    height: 12px;
+  }
+
+  html[data-scrollbar="classic"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html[data-scrollbar="classic"]::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 9999px;
+  }
+
+  .dark html[data-scrollbar="classic"]::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+  }
+}
+
+/* Local Scroll Area Utility */
+@layer utilities {
+  .scroll-area {
+    overflow: auto;
+  }
+
+  /* Overlay behavior for inner scrollers - ONLY on hover-capable devices */
+  @media (hover: hover) {
+    .scroll-area::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+
+    .scroll-area:hover::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .scroll-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scroll-area::-webkit-scrollbar-thumb {
+      background: hsl(var(--primary) / 0.3);
+      border-radius: 9999px;
+    }
+
+    .scroll-area::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary) / 0.5);
+    }
+
+    .dark .scroll-area::-webkit-scrollbar-thumb {
+      background: hsl(var(--primary) / 0.4);
+    }
+
+    .dark .scroll-area::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary) / 0.6);
+    }
+  }
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
