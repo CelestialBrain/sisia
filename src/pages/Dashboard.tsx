@@ -80,9 +80,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats cards skeleton */}
-        <div className="grid gap-3 md:grid-cols-3">
-...
-        </div>
+        <div className="grid gap-3 md:grid-cols-3">...</div>
 
         {/* Schedule preview skeleton */}
         <Card>
@@ -110,7 +108,7 @@ export default function Dashboard() {
             <CardTitle>
               Welcome to{" "}
               <span className="text-primary" style={{ letterSpacing: "var(--logo-spacing, -0.05em)" }}>
-                (aisis)
+                (sisia)
               </span>
             </CardTitle>
             <CardDescription>Get started by following these steps</CardDescription>
@@ -198,7 +196,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          
+
           <div className="grid gap-3 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
