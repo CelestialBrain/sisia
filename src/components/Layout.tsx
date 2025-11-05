@@ -183,10 +183,7 @@ export function Layout({ children }: LayoutProps) {
                 className="text-2xl font-bold text-primary leading-none relative top-[2px]"
                 style={{ letterSpacing: "var(--logo-spacing, -0.05em)" }}
               >
-                (a)
-              </span>
-              <span className="text-[10px] text-muted-foreground font-medium leading-tight uppercase relative top-[11.3px] ml-1.5">
-                v{clientLogger.getBuildInfo().version}
+                sisia
               </span>
             </Link>
             <div className="flex flex-col gap-0 text-right max-w-[180px] mt-[5px]">
@@ -271,10 +268,7 @@ export function Layout({ children }: LayoutProps) {
             className="text-2xl font-bold text-primary leading-none relative -top-[2px]"
             style={{ letterSpacing: "var(--logo-spacing, -0.05em)" }}
           >
-            (a)
-          </span>
-          <span className="text-[10px] text-muted-foreground font-medium leading-tight uppercase relative top-[7.3px] ml-1.5">
-            v{clientLogger.getBuildInfo().version}
+            sisia
           </span>
         </Link>
         <div className="flex items-center gap-2">
