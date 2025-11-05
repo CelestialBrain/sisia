@@ -49,7 +49,7 @@ export default function Login() {
       <Card className="w-full max-w-md mx-auto shadow-medium">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto">
-            <div className="text-6xl font-bold text-primary mb-4">(a)</div>
+            <div className="text-6xl font-bold text-primary mb-4">sisia</div>
             <p className="text-lg text-muted-foreground">sick and tired of aisis?</p>
           </div>
         </CardHeader>

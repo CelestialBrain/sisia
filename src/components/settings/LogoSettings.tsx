@@ -19,7 +19,7 @@ export default function LogoSettings() {
       <CardHeader>
         <CardTitle>Logo Appearance</CardTitle>
         <CardDescription>
-          Customize the spacing and appearance of the (a) logo
+          Customize the spacing and appearance of the sisia logo
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -47,11 +47,11 @@ export default function LogoSettings() {
         </div>
 
         <div className="rounded-lg border bg-muted/30 p-8 flex items-center justify-center">
-          <span 
+          <span
             className="text-4xl font-bold text-primary leading-none"
             style={{ letterSpacing: `${letterSpacing}em` }}
           >
-            (a)
+            sisia
           </span>
         </div>
       </CardContent>
