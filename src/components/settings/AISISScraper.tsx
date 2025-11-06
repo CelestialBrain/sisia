@@ -38,6 +38,22 @@ export default function AISISScraper() {
   const [curriculumDownloads, setCurriculumDownloads] = useState<any[]>([]);
   const { toast } = useToast();
 
+  const calculateProgressFromJob = (job: any) => {
+    if (!job) return 0;
+
+    if (job.total_pages && job.total_pages > 0) {
+      const computed = Math.round(((job.pages_scraped ?? 0) / job.total_pages) * 100);
+      return Math.min(100, Math.max(0, computed));
+    }
+
+    if (job.total_courses && job.total_courses > 0) {
+      const computed = Math.round(((job.courses_processed ?? 0) / job.total_courses) * 100);
+      return Math.min(100, Math.max(0, computed));
+    }
+
+    return job.progress || 0;
+  };
+
   useEffect(() => {
     checkCredentials();
     loadJobHistory();
@@ -57,7 +73,7 @@ export default function AISISScraper() {
           },
           (payload) => {
             const job = payload.new as any;
-            setProgress(job.progress || 0);
+            setProgress(calculateProgressFromJob(job));
             setStatusMessage(job.status);
             
             if (job.status === 'completed' || job.status === 'failed') {
