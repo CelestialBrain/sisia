@@ -63,6 +63,7 @@ export type Database = {
           start_time: string | null
           subject_code: string
           term_code: string
+          time_pattern: string | null
           units: number | null
           updated_at: string | null
         }
@@ -81,6 +82,7 @@ export type Database = {
           start_time?: string | null
           subject_code: string
           term_code: string
+          time_pattern?: string | null
           units?: number | null
           updated_at?: string | null
         }
@@ -99,6 +101,7 @@ export type Database = {
           start_time?: string | null
           subject_code?: string
           term_code?: string
+          time_pattern?: string | null
           units?: number | null
           updated_at?: string | null
         }
@@ -288,6 +291,33 @@ export type Database = {
           },
         ]
       }
+      curriculum_downloads: {
+        Row: {
+          created_at: string | null
+          download_data: Json | null
+          id: string
+          program_code: string
+          user_id: string
+          version_label: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          download_data?: Json | null
+          id?: string
+          program_code: string
+          user_id: string
+          version_label?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          download_data?: Json | null
+          id?: string
+          program_code?: string
+          user_id?: string
+          version_label?: string | null
+        }
+        Relationships: []
+      }
       curriculum_versions: {
         Row: {
           created_at: string | null
@@ -459,6 +489,8 @@ export type Database = {
       }
       import_jobs: {
         Row: {
+          completed_at: string | null
+          control_action: string | null
           courses_processed: number | null
           created_at: string | null
           department: string | null
@@ -466,6 +498,7 @@ export type Database = {
           id: string
           idempotency_key: string | null
           job_type: string
+          partial_data: Json | null
           program_code: string | null
           program_name: string | null
           progress: number | null
@@ -480,6 +513,8 @@ export type Database = {
           version_label: string | null
         }
         Insert: {
+          completed_at?: string | null
+          control_action?: string | null
           courses_processed?: number | null
           created_at?: string | null
           department?: string | null
@@ -487,6 +522,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           job_type: string
+          partial_data?: Json | null
           program_code?: string | null
           program_name?: string | null
           progress?: number | null
@@ -501,6 +537,8 @@ export type Database = {
           version_label?: string | null
         }
         Update: {
+          completed_at?: string | null
+          control_action?: string | null
           courses_processed?: number | null
           created_at?: string | null
           department?: string | null
@@ -508,6 +546,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           job_type?: string
+          partial_data?: Json | null
           program_code?: string | null
           program_name?: string | null
           progress?: number | null
@@ -532,11 +571,16 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           email: string | null
+          entry_year: string | null
           id: string
           show_on_leaderboard: boolean | null
           student_number: string | null
           theme_color_accent: string | null
+          theme_color_hue: number | null
+          theme_color_lightness: number | null
+          theme_color_mode: string | null
           theme_color_primary: string | null
+          theme_color_saturation: number | null
           theme_color_secondary: string | null
           updated_at: string | null
         }
@@ -548,11 +592,16 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           email?: string | null
+          entry_year?: string | null
           id: string
           show_on_leaderboard?: boolean | null
           student_number?: string | null
           theme_color_accent?: string | null
+          theme_color_hue?: number | null
+          theme_color_lightness?: number | null
+          theme_color_mode?: string | null
           theme_color_primary?: string | null
+          theme_color_saturation?: number | null
           theme_color_secondary?: string | null
           updated_at?: string | null
         }
@@ -564,11 +613,16 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           email?: string | null
+          entry_year?: string | null
           id?: string
           show_on_leaderboard?: boolean | null
           student_number?: string | null
           theme_color_accent?: string | null
+          theme_color_hue?: number | null
+          theme_color_lightness?: number | null
+          theme_color_mode?: string | null
           theme_color_primary?: string | null
+          theme_color_saturation?: number | null
           theme_color_secondary?: string | null
           updated_at?: string | null
         }
@@ -638,6 +692,7 @@ export type Database = {
       program_tracks: {
         Row: {
           created_at: string | null
+          description: string | null
           id: string
           program_id: string
           track_code: string
@@ -645,6 +700,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          description?: string | null
           id?: string
           program_id: string
           track_code: string
@@ -652,6 +708,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          description?: string | null
           id?: string
           program_id?: string
           track_code?: string
@@ -788,9 +845,12 @@ export type Database = {
         Row: {
           color: string | null
           course_code: string
+          course_title: string | null
           created_at: string | null
           day_of_week: number
           end_time: string
+          font_color: string | null
+          font_size: string | null
           id: string
           instructor: string | null
           room: string | null
@@ -802,9 +862,12 @@ export type Database = {
         Insert: {
           color?: string | null
           course_code: string
+          course_title?: string | null
           created_at?: string | null
           day_of_week: number
           end_time: string
+          font_color?: string | null
+          font_size?: string | null
           id?: string
           instructor?: string | null
           room?: string | null
@@ -816,9 +879,12 @@ export type Database = {
         Update: {
           color?: string | null
           course_code?: string
+          course_title?: string | null
           created_at?: string | null
           day_of_week?: number
           end_time?: string
+          font_color?: string | null
+          font_size?: string | null
           id?: string
           instructor?: string | null
           room?: string | null
@@ -841,8 +907,10 @@ export type Database = {
         Row: {
           color: string | null
           course_code: string
+          course_title: string | null
           created_at: string | null
           id: string
+          is_manual: boolean | null
           placed_count: number | null
           required_count: number | null
           schedule_id: string
@@ -851,8 +919,10 @@ export type Database = {
         Insert: {
           color?: string | null
           course_code: string
+          course_title?: string | null
           created_at?: string | null
           id?: string
+          is_manual?: boolean | null
           placed_count?: number | null
           required_count?: number | null
           schedule_id: string
@@ -861,8 +931,10 @@ export type Database = {
         Update: {
           color?: string | null
           course_code?: string
+          course_title?: string | null
           created_at?: string | null
           id?: string
+          is_manual?: boolean | null
           placed_count?: number | null
           required_count?: number | null
           schedule_id?: string
@@ -969,28 +1041,61 @@ export type Database = {
       }
       scraped_curriculum: {
         Row: {
+          category: string | null
+          course_code: string | null
+          course_title: string | null
           courses: Json | null
           created_at: string | null
           id: string
+          prerequisites: string | null
           program_code: string
+          program_name: string | null
+          raw_html: string | null
+          semester: number | null
+          units: number | null
           user_id: string
           version_label: string | null
+          version_sem: number | null
+          version_year: number | null
+          year_level: number | null
         }
         Insert: {
+          category?: string | null
+          course_code?: string | null
+          course_title?: string | null
           courses?: Json | null
           created_at?: string | null
           id?: string
+          prerequisites?: string | null
           program_code: string
+          program_name?: string | null
+          raw_html?: string | null
+          semester?: number | null
+          units?: number | null
           user_id: string
           version_label?: string | null
+          version_sem?: number | null
+          version_year?: number | null
+          year_level?: number | null
         }
         Update: {
+          category?: string | null
+          course_code?: string | null
+          course_title?: string | null
           courses?: Json | null
           created_at?: string | null
           id?: string
+          prerequisites?: string | null
           program_code?: string
+          program_name?: string | null
+          raw_html?: string | null
+          semester?: number | null
+          units?: number | null
           user_id?: string
           version_label?: string | null
+          version_sem?: number | null
+          version_year?: number | null
+          year_level?: number | null
         }
         Relationships: []
       }
@@ -1122,6 +1227,33 @@ export type Database = {
           schedule?: string | null
           section?: string | null
           term?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_aisis_credentials: {
+        Row: {
+          created_at: string | null
+          encrypted_credentials: string
+          id: string
+          last_used_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          encrypted_credentials: string
+          id?: string
+          last_used_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          encrypted_credentials?: string
+          id?: string
+          last_used_at?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1260,6 +1392,38 @@ export type Database = {
             columns: ["curriculum_version_id"]
             isOneToOne: false
             referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_programs: {
+        Row: {
+          created_at: string | null
+          id: string
+          program_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          program_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          program_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_programs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]
