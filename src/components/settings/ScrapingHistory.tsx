@@ -487,7 +487,7 @@ export default function ScrapingHistory() {
     }
   };
 
-    const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info"> = {
       completed: "success",
       failed: "destructive",
@@ -496,7 +496,14 @@ export default function ScrapingHistory() {
       incomplete: "warning",
       pending: "outline"
     };
-    return <Badge variant={variants[status] || "outline"}>{status.toUpperCase()}</Badge>;
+    return (
+      <Badge
+        variant={variants[status] || "outline"}
+        className="break-words whitespace-normal text-left"
+      >
+        {status.toUpperCase()}
+      </Badge>
+    );
   };
 
   const toggleJobExpansion = (jobId: string) => {
@@ -598,29 +605,31 @@ export default function ScrapingHistory() {
                 const hasAnyData = Object.values(job.data_counts).some(count => count > 0);
                 
                 return (
-                  <Card key={job.id} className="border-border hover:border-primary/50 transition-colors">
-                    <CardContent className="pt-4">
+                  <Card key={job.id} className="border-border hover:border-primary/50 transition-colors overflow-hidden">
+                    <CardContent className="pt-4 overflow-hidden">
                       <div className="space-y-3">
                         {/* Job Header - Clickable */}
-                        <div 
-                          className="flex items-start justify-between cursor-pointer"
+                        <div
+                          className="flex flex-col gap-3 cursor-pointer sm:flex-row sm:items-start"
                           onClick={() => toggleJobExpansion(job.id)}
                         >
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
+                          <div className="flex-1 space-y-2 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                               {isExpanded ? (
                                 <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                               )}
                               {getStatusIcon(job.status)}
-                              <h3 className="font-semibold text-sm">
+                              <h3 className="font-semibold text-sm min-w-0 flex-1 break-words">
                                 {getJobTypeDisplay(job)}
                               </h3>
-                              {getStatusBadge(job.status)}
+                              <div className="min-w-0">
+                                {getStatusBadge(job.status)}
+                              </div>
                             </div>
-                            
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground pl-6">
+
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pl-4 sm:pl-6 min-w-0">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {format(new Date(job.created_at), 'MMM d, yyyy h:mm a')}
@@ -634,13 +643,18 @@ export default function ScrapingHistory() {
                             </div>
 
                             {/* Data Type Badges */}
-                            <div className="flex gap-2 flex-wrap pl-6">
+                            <div className="flex flex-wrap gap-2 pl-4 sm:pl-6 min-w-0">
                               {Object.entries(job.data_counts)
                                 .filter(([key, count]) => count > 0)
                                 .map(([dataType, count]) => {
                                   const Icon = getDataTypeIcon(dataType);
                                   return (
-                                    <Badge key={dataType} variant="outline" size="sm" className="gap-1">
+                                    <Badge
+                                      key={dataType}
+                                      variant="outline"
+                                      size="sm"
+                                      className="gap-1 break-words whitespace-normal text-left"
+                                    >
                                       <Icon className="h-3 w-3" />
                                       {getDataTypeLabel(dataType)}: {count}
                                     </Badge>
@@ -652,20 +666,38 @@ export default function ScrapingHistory() {
 
                         {/* Expanded Details */}
                         {isExpanded && (
-                          <div className="space-y-3 pl-6 pt-2 border-l-2 border-border ml-2">
+                          <div className="space-y-3 border-l-2 border-border pl-4 pt-2 sm:pl-6 sm:ml-2 max-w-full">
                             {/* Job Metadata */}
                             {(job.program_name || job.term_code || job.department) && (
-                              <div className="space-y-1">
+                              <div className="space-y-1 max-w-full">
                                 <p className="text-xs font-medium text-muted-foreground">Job Details</p>
-                                <div className="flex gap-2 flex-wrap">
+                                <div className="flex flex-wrap gap-2 min-w-0">
                                   {job.program_name && (
-                                    <Badge variant="secondary" size="sm">{job.program_name}</Badge>
+                                    <Badge
+                                      variant="secondary"
+                                      size="sm"
+                                      className="break-words whitespace-normal text-left"
+                                    >
+                                      {job.program_name}
+                                    </Badge>
                                   )}
                                   {job.term_code && (
-                                    <Badge variant="secondary" size="sm">Term: {job.term_code}</Badge>
+                                    <Badge
+                                      variant="secondary"
+                                      size="sm"
+                                      className="break-words whitespace-normal text-left"
+                                    >
+                                      Term: {job.term_code}
+                                    </Badge>
                                   )}
                                   {job.department && (
-                                    <Badge variant="secondary" size="sm">Dept: {job.department}</Badge>
+                                    <Badge
+                                      variant="secondary"
+                                      size="sm"
+                                      className="break-words whitespace-normal text-left"
+                                    >
+                                      Dept: {job.department}
+                                    </Badge>
                                   )}
                                 </div>
                               </div>
@@ -673,18 +705,18 @@ export default function ScrapingHistory() {
 
                             {/* Selected Data Types */}
                             {job.selected_data_types.length > 0 && (
-                              <div className="space-y-1">
+                              <div className="space-y-1 max-w-full">
                                 <p className="text-xs font-medium text-muted-foreground">Selected Data Types</p>
-                                <div className="flex gap-2 flex-wrap">
+                                <div className="flex flex-wrap gap-2 min-w-0">
                                   {job.selected_data_types.map(dataType => {
                                     const Icon = getDataTypeIcon(dataType);
                                     const hasData = job.data_counts[dataType as keyof DataCounts] > 0;
                                     return (
-                                      <Badge 
-                                        key={dataType} 
-                                        variant={hasData ? "success" : "outline"} 
+                                      <Badge
+                                        key={dataType}
+                                        variant={hasData ? "success" : "outline"}
                                         size="sm"
-                                        className="gap-1"
+                                        className="gap-1 break-words whitespace-normal text-left"
                                       >
                                         <Icon className="h-3 w-3" />
                                         {getDataTypeLabel(dataType)}
