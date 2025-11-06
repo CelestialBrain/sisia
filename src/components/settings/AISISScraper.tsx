@@ -498,15 +498,24 @@ export default function AISISScraper() {
       {/* Credentials Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            AISIS Credentials
-          </CardTitle>
-          <CardDescription>
-            {hasCredentials 
-              ? `Credentials saved${lastUsed ? `. Last used: ${format(new Date(lastUsed), 'PPp')}` : ''}` 
-              : 'Enter your AISIS username and password'}
-          </CardDescription>
+          <div className="flex min-h-[96px] flex-col justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                AISIS Credentials
+              </CardTitle>
+              <CardDescription>
+                {hasCredentials
+                  ? 'Credentials saved'
+                  : 'Enter your AISIS username and password'}
+              </CardDescription>
+            </div>
+            <div className="min-h-[1rem] text-xs text-muted-foreground">
+              {hasCredentials && lastUsed && (
+                <span>Last used: {format(new Date(lastUsed), 'PPp')}</span>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasCredentials ? (
