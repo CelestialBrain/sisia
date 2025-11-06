@@ -10,13 +10,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database, Key, Play, Trash2, AlertTriangle, Download, FileText, Code, FileSpreadsheet, Pause, Square, PlayCircle, ChevronDown } from 'lucide-react';
+import { Database, Key, Play, Trash2, AlertTriangle, Download, FileText, Code, FileSpreadsheet, Pause, Square, PlayCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { toast as sonnerToast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClientLogger } from '@/hooks/useClientLogger';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function AISISScraperEnhanced() {
   const [username, setUsername] = useState('');
@@ -33,8 +32,6 @@ export default function AISISScraperEnhanced() {
   const [scrapeMyGrades, setScrapeMyGrades] = useState(false);
   const [scrapeHoldOrders, setScrapeHoldOrders] = useState(false);
   const [scrapeAccountInfo, setScrapeAccountInfo] = useState(false);
-  const [isAcademicOpen, setIsAcademicOpen] = useState(false);
-  const [isStudentOpen, setIsStudentOpen] = useState(false);
   
   // Scraping mode: Only 'server' is supported due to CORS restrictions
   const scrapeMode = 'server';
@@ -51,22 +48,6 @@ export default function AISISScraperEnhanced() {
   
   const { toast } = useToast();
   const logger = useClientLogger();
-
-  const calculateProgressFromJob = (job: any) => {
-    if (!job) return 0;
-
-    if (job.total_pages && job.total_pages > 0) {
-      const computed = Math.round(((job.pages_scraped ?? 0) / job.total_pages) * 100);
-      return Math.min(100, Math.max(0, computed));
-    }
-
-    if (job.total_courses && job.total_courses > 0) {
-      const computed = Math.round(((job.courses_processed ?? 0) / job.total_courses) * 100);
-      return Math.min(100, Math.max(0, computed));
-    }
-
-    return job.progress || 0;
-  };
 
   // Background job tracking
   useEffect(() => {
@@ -155,7 +136,7 @@ export default function AISISScraperEnhanced() {
         },
         (payload) => {
           const job = payload.new as any;
-          setProgress(calculateProgressFromJob(job));
+          setProgress(job.progress || 0);
           setStatusMessage(job.status);
           setIsPaused(job.control_action === 'pause');
           
@@ -281,7 +262,7 @@ export default function AISISScraperEnhanced() {
     if (data) {
       if (data.status === 'processing' || data.status === 'pending') {
         setIsScrapingRunning(true);
-        setProgress(calculateProgressFromJob(data));
+        setProgress(data.progress || 0);
         setStatusMessage(data.status);
         setIsPaused(data.control_action === 'pause');
       } else {
@@ -625,28 +606,24 @@ export default function AISISScraperEnhanced() {
       {/* Credentials Card */}
       <Card>
         <CardHeader>
-          <div className="flex min-h-[96px] flex-col justify-between gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                AISIS Credentials
-              </CardTitle>
-              <CardDescription>
-                Your credentials are encrypted and stored securely
-              </CardDescription>
-            </div>
-            <div className="min-h-[1rem] text-xs text-muted-foreground">
-              {hasCredentials && lastUsed && (
-                <span>Last used: {format(new Date(lastUsed), 'PPp')}</span>
-              )}
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="w-5 h-5" />
+            AISIS Credentials
+          </CardTitle>
+          <CardDescription>
+            Your credentials are encrypted and stored securely
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {hasCredentials ? (
             <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <div>
                 <p className="font-medium">Credentials saved</p>
+                {lastUsed && (
+                  <p className="text-sm text-muted-foreground">
+                    Last used: {format(new Date(lastUsed), 'PPp')}
+                  </p>
+                )}
               </div>
               <Button variant="destructive" onClick={deleteCredentials}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -704,154 +681,39 @@ export default function AISISScraperEnhanced() {
           {/* Scraping Options */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Data to Scrape</Label>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Collapsible open={isAcademicOpen} onOpenChange={setIsAcademicOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span>Academic Records</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isAcademicOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-3 rounded-lg border bg-muted/40 p-4">
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="my_schedule"
-                      checked={scrapeMySchedule}
-                      onCheckedChange={(checked) => setScrapeMySchedule(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="my_schedule" className="text-sm font-medium leading-none">
-                        My Schedule
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Your personal class schedule and meeting details.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="schedules"
-                      checked={scrapeSchedules}
-                      onCheckedChange={(checked) => setScrapeSchedules(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="schedules" className="text-sm font-medium leading-none">
-                        Department Schedules
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        All available classes published in AISIS.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="curriculum"
-                      checked={scrapeCurriculum}
-                      onCheckedChange={(checked) => setScrapeCurriculum(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="curriculum" className="text-sm font-medium leading-none">
-                        Curriculum Data
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Degree program requirements and recommended flowcharts.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="my_program"
-                      checked={scrapeMyProgram}
-                      onCheckedChange={(checked) => setScrapeMyProgram(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="my_program" className="text-sm font-medium leading-none">
-                        My Program Evaluation
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Personalized program evaluation summaries and progress.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="grades"
-                      checked={scrapeGrades}
-                      onCheckedChange={(checked) => setScrapeGrades(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="grades" className="text-sm font-medium leading-none">
-                        Class Grade Reports
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Published grade reports for all available courses.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="my_grades"
-                      checked={scrapeMyGrades}
-                      onCheckedChange={(checked) => setScrapeMyGrades(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="my_grades" className="text-sm font-medium leading-none">
-                        My Grades
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Your personal grade history and transcript data.
-                      </p>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible open={isStudentOpen} onOpenChange={setIsStudentOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span>Student &amp; Account Pages</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isStudentOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-3 rounded-lg border bg-muted/40 p-4">
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="hold_orders"
-                      checked={scrapeHoldOrders}
-                      onCheckedChange={(checked) => setScrapeHoldOrders(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="hold_orders" className="text-sm font-medium leading-none">
-                        Hold Orders
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Active registration holds and clearance requirements.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="account_info"
-                      checked={scrapeAccountInfo}
-                      onCheckedChange={(checked) => setScrapeAccountInfo(checked as boolean)}
-                    />
-                    <div className="space-y-1">
-                      <label htmlFor="account_info" className="text-sm font-medium leading-none">
-                        Account Information
-                      </label>
-                      <p className="text-xs text-muted-foreground">
-                        Tuition balances, payment records, and billing statements.
-                      </p>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="my_schedule" 
+                  checked={scrapeMySchedule}
+                  onCheckedChange={(checked) => setScrapeMySchedule(checked as boolean)}
+                />
+                <label htmlFor="my_schedule" className="text-sm cursor-pointer">
+                  My Schedule (Your personal class schedule)
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="schedules" 
+                  checked={scrapeSchedules}
+                  onCheckedChange={(checked) => setScrapeSchedules(checked as boolean)}
+                />
+                <label htmlFor="schedules" className="text-sm cursor-pointer">
+                  Department Schedules (All available classes)
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="curriculum" 
+                  checked={scrapeCurriculum}
+                  onCheckedChange={(checked) => setScrapeCurriculum(checked as boolean)}
+                />
+                <label htmlFor="curriculum" className="text-sm cursor-pointer">
+                  Curriculum Data (Degree program requirements)
+                </label>
+              </div>
             </div>
           </div>
 

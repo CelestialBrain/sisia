@@ -50,12 +50,7 @@ export default function Signup() {
       <Card className="w-full max-w-md mx-auto shadow-medium">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto">
-            <div
-              className="text-2xl font-bold text-primary mb-4 leading-none"
-              style={{ letterSpacing: "var(--logo-spacing, -0.05em)" }}
-            >
-              sisia
-            </div>
+            <div className="text-6xl font-bold text-primary mb-4">sisia</div>
             <p className="text-lg text-muted-foreground">sick and tired of aisis?</p>
           </div>
         </CardHeader>

@@ -38,22 +38,6 @@ export default function AISISScraper() {
   const [curriculumDownloads, setCurriculumDownloads] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const calculateProgressFromJob = (job: any) => {
-    if (!job) return 0;
-
-    if (job.total_pages && job.total_pages > 0) {
-      const computed = Math.round(((job.pages_scraped ?? 0) / job.total_pages) * 100);
-      return Math.min(100, Math.max(0, computed));
-    }
-
-    if (job.total_courses && job.total_courses > 0) {
-      const computed = Math.round(((job.courses_processed ?? 0) / job.total_courses) * 100);
-      return Math.min(100, Math.max(0, computed));
-    }
-
-    return job.progress || 0;
-  };
-
   useEffect(() => {
     checkCredentials();
     loadJobHistory();
@@ -73,7 +57,7 @@ export default function AISISScraper() {
           },
           (payload) => {
             const job = payload.new as any;
-            setProgress(calculateProgressFromJob(job));
+            setProgress(job.progress || 0);
             setStatusMessage(job.status);
             
             if (job.status === 'completed' || job.status === 'failed') {
@@ -514,24 +498,15 @@ export default function AISISScraper() {
       {/* Credentials Card */}
       <Card>
         <CardHeader>
-          <div className="flex min-h-[96px] flex-col justify-between gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                AISIS Credentials
-              </CardTitle>
-              <CardDescription>
-                {hasCredentials
-                  ? 'Credentials saved'
-                  : 'Enter your AISIS username and password'}
-              </CardDescription>
-            </div>
-            <div className="min-h-[1rem] text-xs text-muted-foreground">
-              {hasCredentials && lastUsed && (
-                <span>Last used: {format(new Date(lastUsed), 'PPp')}</span>
-              )}
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            AISIS Credentials
+          </CardTitle>
+          <CardDescription>
+            {hasCredentials 
+              ? `Credentials saved${lastUsed ? `. Last used: ${format(new Date(lastUsed), 'PPp')}` : ''}` 
+              : 'Enter your AISIS username and password'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasCredentials ? (
