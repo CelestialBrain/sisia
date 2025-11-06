@@ -49,6 +49,22 @@ export default function AISISScraperEnhanced() {
   const { toast } = useToast();
   const logger = useClientLogger();
 
+  const calculateProgressFromJob = (job: any) => {
+    if (!job) return 0;
+
+    if (job.total_pages && job.total_pages > 0) {
+      const computed = Math.round(((job.pages_scraped ?? 0) / job.total_pages) * 100);
+      return Math.min(100, Math.max(0, computed));
+    }
+
+    if (job.total_courses && job.total_courses > 0) {
+      const computed = Math.round(((job.courses_processed ?? 0) / job.total_courses) * 100);
+      return Math.min(100, Math.max(0, computed));
+    }
+
+    return job.progress || 0;
+  };
+
   // Background job tracking
   useEffect(() => {
     logger.info('scraper', 'AISISScraperEnhanced component mounted');
@@ -136,7 +152,7 @@ export default function AISISScraperEnhanced() {
         },
         (payload) => {
           const job = payload.new as any;
-          setProgress(job.progress || 0);
+          setProgress(calculateProgressFromJob(job));
           setStatusMessage(job.status);
           setIsPaused(job.control_action === 'pause');
           
@@ -262,7 +278,7 @@ export default function AISISScraperEnhanced() {
     if (data) {
       if (data.status === 'processing' || data.status === 'pending') {
         setIsScrapingRunning(true);
-        setProgress(data.progress || 0);
+        setProgress(calculateProgressFromJob(data));
         setStatusMessage(data.status);
         setIsPaused(data.control_action === 'pause');
       } else {
