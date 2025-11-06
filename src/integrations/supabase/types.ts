@@ -298,6 +298,7 @@ export type Database = {
           updated_at: string | null
           version_label: string
           version_sem: number | null
+          version_seq: number | null
           version_year: number | null
         }
         Insert: {
@@ -309,6 +310,7 @@ export type Database = {
           updated_at?: string | null
           version_label: string
           version_sem?: number | null
+          version_seq?: number | null
           version_year?: number | null
         }
         Update: {
@@ -320,6 +322,7 @@ export type Database = {
           updated_at?: string | null
           version_label?: string
           version_sem?: number | null
+          version_seq?: number | null
           version_year?: number | null
         }
         Relationships: [
@@ -413,7 +416,9 @@ export type Database = {
       function_logs: {
         Row: {
           created_at: string | null
+          details: string | null
           event_message: string | null
+          event_type: string | null
           function_name: string
           id: string
           import_job_id: string | null
@@ -422,7 +427,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          details?: string | null
           event_message?: string | null
+          event_type?: string | null
           function_name: string
           id?: string
           import_job_id?: string | null
@@ -431,7 +438,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          details?: string | null
           event_message?: string | null
+          event_type?: string | null
           function_name?: string
           id?: string
           import_job_id?: string | null
@@ -458,12 +467,17 @@ export type Database = {
           idempotency_key: string | null
           job_type: string
           program_code: string | null
+          program_name: string | null
           progress: number | null
+          schedules_processed: number | null
+          started_at: string | null
           status: string
           term_code: string | null
           total_courses: number | null
+          total_schedules: number | null
           updated_at: string | null
           user_id: string
+          version_label: string | null
         }
         Insert: {
           courses_processed?: number | null
@@ -474,12 +488,17 @@ export type Database = {
           idempotency_key?: string | null
           job_type: string
           program_code?: string | null
+          program_name?: string | null
           progress?: number | null
+          schedules_processed?: number | null
+          started_at?: string | null
           status?: string
           term_code?: string | null
           total_courses?: number | null
+          total_schedules?: number | null
           updated_at?: string | null
           user_id: string
+          version_label?: string | null
         }
         Update: {
           courses_processed?: number | null
@@ -490,12 +509,17 @@ export type Database = {
           idempotency_key?: string | null
           job_type?: string
           program_code?: string | null
+          program_name?: string | null
           progress?: number | null
+          schedules_processed?: number | null
+          started_at?: string | null
           status?: string
           term_code?: string | null
           total_courses?: number | null
+          total_schedules?: number | null
           updated_at?: string | null
           user_id?: string
+          version_label?: string | null
         }
         Relationships: []
       }
@@ -554,9 +578,11 @@ export type Database = {
         Row: {
           created_at: string | null
           curriculum_version_id: string | null
+          end_term: string | null
           id: string
           is_active: boolean | null
           program_id: string
+          status: string | null
           track_id: string | null
           updated_at: string | null
           user_id: string
@@ -564,9 +590,11 @@ export type Database = {
         Insert: {
           created_at?: string | null
           curriculum_version_id?: string | null
+          end_term?: string | null
           id?: string
           is_active?: boolean | null
           program_id: string
+          status?: string | null
           track_id?: string | null
           updated_at?: string | null
           user_id: string
@@ -574,9 +602,11 @@ export type Database = {
         Update: {
           created_at?: string | null
           curriculum_version_id?: string | null
+          end_term?: string | null
           id?: string
           is_active?: boolean | null
           program_id?: string
+          status?: string | null
           track_id?: string | null
           updated_at?: string | null
           user_id?: string
@@ -1146,6 +1176,94 @@ export type Database = {
           },
         ]
       }
+      user_grade_plan_courses: {
+        Row: {
+          course_code: string
+          course_title: string | null
+          created_at: string | null
+          expected_grade: string | null
+          id: string
+          plan_id: string
+          term_semester: number
+          term_year: number
+          units: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          course_code: string
+          course_title?: string | null
+          created_at?: string | null
+          expected_grade?: string | null
+          id?: string
+          plan_id: string
+          term_semester: number
+          term_year: number
+          units?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          course_code?: string
+          course_title?: string | null
+          created_at?: string | null
+          expected_grade?: string | null
+          id?: string
+          plan_id?: string
+          term_semester?: number
+          term_year?: number
+          units?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_grade_plan_courses_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "user_grade_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_grade_plans: {
+        Row: {
+          created_at: string | null
+          curriculum_version_id: string | null
+          id: string
+          is_active: boolean | null
+          plan_name: string
+          target_qpi: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          curriculum_version_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          plan_name?: string
+          target_qpi?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          curriculum_version_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          plan_name?: string
+          target_qpi?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_grade_plans_curriculum_version_id_fkey"
+            columns: ["curriculum_version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1199,6 +1317,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_stale_import_jobs: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
