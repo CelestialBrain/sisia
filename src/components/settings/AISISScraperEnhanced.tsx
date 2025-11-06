@@ -606,24 +606,28 @@ export default function AISISScraperEnhanced() {
       {/* Credentials Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5" />
-            AISIS Credentials
-          </CardTitle>
-          <CardDescription>
-            Your credentials are encrypted and stored securely
-          </CardDescription>
+          <div className="flex min-h-[96px] flex-col justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                AISIS Credentials
+              </CardTitle>
+              <CardDescription>
+                Your credentials are encrypted and stored securely
+              </CardDescription>
+            </div>
+            <div className="min-h-[1rem] text-xs text-muted-foreground">
+              {hasCredentials && lastUsed && (
+                <span>Last used: {format(new Date(lastUsed), 'PPp')}</span>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {hasCredentials ? (
             <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <div>
                 <p className="font-medium">Credentials saved</p>
-                {lastUsed && (
-                  <p className="text-sm text-muted-foreground">
-                    Last used: {format(new Date(lastUsed), 'PPp')}
-                  </p>
-                )}
               </div>
               <Button variant="destructive" onClick={deleteCredentials}>
                 <Trash2 className="w-4 h-4 mr-2" />
