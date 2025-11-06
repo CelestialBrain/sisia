@@ -116,6 +116,7 @@ export type Database = {
           file_url: string | null
           id: string
           message_content: string
+          message_type: string | null
           program_name: string | null
           user_id: string | null
         }
@@ -127,6 +128,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           message_content: string
+          message_type?: string | null
           program_name?: string | null
           user_id?: string | null
         }
@@ -138,6 +140,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           message_content?: string
+          message_type?: string | null
           program_name?: string | null
           user_id?: string | null
         }
@@ -321,6 +324,7 @@ export type Database = {
       curriculum_versions: {
         Row: {
           created_at: string | null
+          effective_start: string | null
           id: string
           is_active: boolean | null
           program_id: string
@@ -333,6 +337,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          effective_start?: string | null
           id?: string
           is_active?: boolean | null
           program_id: string
@@ -345,6 +350,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          effective_start?: string | null
           id?: string
           is_active?: boolean | null
           program_id?: string
@@ -775,6 +781,7 @@ export type Database = {
           id: string
           min_courses: number | null
           min_units: number | null
+          name: string | null
         }
         Insert: {
           created_at?: string | null
@@ -785,6 +792,7 @@ export type Database = {
           id?: string
           min_courses?: number | null
           min_units?: number | null
+          name?: string | null
         }
         Update: {
           created_at?: string | null
@@ -795,6 +803,7 @@ export type Database = {
           id?: string
           min_courses?: number | null
           min_units?: number | null
+          name?: string | null
         }
         Relationships: [
           {
@@ -1266,6 +1275,9 @@ export type Database = {
           created_at: string | null
           grade: string | null
           id: string
+          qpi_value: number | null
+          school_year: string | null
+          semester: number | null
           status: string | null
           term: string | null
           units: number | null
@@ -1279,6 +1291,9 @@ export type Database = {
           created_at?: string | null
           grade?: string | null
           id?: string
+          qpi_value?: number | null
+          school_year?: string | null
+          semester?: number | null
           status?: string | null
           term?: string | null
           units?: number | null
@@ -1292,6 +1307,9 @@ export type Database = {
           created_at?: string | null
           grade?: string | null
           id?: string
+          qpi_value?: number | null
+          school_year?: string | null
+          semester?: number | null
           status?: string | null
           term?: string | null
           units?: number | null
@@ -1311,41 +1329,63 @@ export type Database = {
       user_grade_plan_courses: {
         Row: {
           course_code: string
+          course_id: string | null
           course_title: string | null
           created_at: string | null
           expected_grade: string | null
+          grade: string | null
           id: string
+          is_from_actual: boolean | null
           plan_id: string
+          semester_label: string | null
           term_semester: number
           term_year: number
           units: number | null
           updated_at: string | null
+          year_level: number | null
         }
         Insert: {
           course_code: string
+          course_id?: string | null
           course_title?: string | null
           created_at?: string | null
           expected_grade?: string | null
+          grade?: string | null
           id?: string
+          is_from_actual?: boolean | null
           plan_id: string
+          semester_label?: string | null
           term_semester: number
           term_year: number
           units?: number | null
           updated_at?: string | null
+          year_level?: number | null
         }
         Update: {
           course_code?: string
+          course_id?: string | null
           course_title?: string | null
           created_at?: string | null
           expected_grade?: string | null
+          grade?: string | null
           id?: string
+          is_from_actual?: boolean | null
           plan_id?: string
+          semester_label?: string | null
           term_semester?: number
           term_year?: number
           units?: number | null
           updated_at?: string | null
+          year_level?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_grade_plan_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_grade_plan_courses_plan_id_fkey"
             columns: ["plan_id"]
