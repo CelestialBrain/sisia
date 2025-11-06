@@ -218,6 +218,7 @@ export type Database = {
           from_course_id: string
           id: string
           to_course_id: string
+          units_override: number | null
         }
         Insert: {
           created_at?: string | null
@@ -225,6 +226,7 @@ export type Database = {
           from_course_id: string
           id?: string
           to_course_id: string
+          units_override?: number | null
         }
         Update: {
           created_at?: string | null
@@ -232,6 +234,7 @@ export type Database = {
           from_course_id?: string
           id?: string
           to_course_id?: string
+          units_override?: number | null
         }
         Relationships: [
           {
@@ -252,6 +255,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          category_tags: string[] | null
           course_code: string
           course_title: string
           created_at: string | null
@@ -263,6 +267,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          category_tags?: string[] | null
           course_code: string
           course_title: string
           created_at?: string | null
@@ -274,6 +279,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          category_tags?: string[] | null
           course_code?: string
           course_title?: string
           created_at?: string | null
@@ -782,6 +788,7 @@ export type Database = {
           min_courses: number | null
           min_units: number | null
           name: string | null
+          priority: number | null
         }
         Insert: {
           created_at?: string | null
@@ -793,6 +800,7 @@ export type Database = {
           min_courses?: number | null
           min_units?: number | null
           name?: string | null
+          priority?: number | null
         }
         Update: {
           created_at?: string | null
@@ -804,6 +812,7 @@ export type Database = {
           min_courses?: number | null
           min_units?: number | null
           name?: string | null
+          priority?: number | null
         }
         Relationships: [
           {
@@ -817,28 +826,34 @@ export type Database = {
       }
       requirement_rules: {
         Row: {
+          code_prefix: string | null
           course_ids: string[] | null
           course_pattern: string | null
           created_at: string | null
           id: string
           req_group_id: string
           rule_type: string
+          tag_pattern: string | null
         }
         Insert: {
+          code_prefix?: string | null
           course_ids?: string[] | null
           course_pattern?: string | null
           created_at?: string | null
           id?: string
           req_group_id: string
           rule_type: string
+          tag_pattern?: string | null
         }
         Update: {
+          code_prefix?: string | null
           course_ids?: string[] | null
           course_pattern?: string | null
           created_at?: string | null
           id?: string
           req_group_id?: string
           rule_type?: string
+          tag_pattern?: string | null
         }
         Relationships: [
           {
@@ -1244,6 +1259,8 @@ export type Database = {
         Row: {
           created_at: string | null
           encrypted_credentials: string
+          encrypted_password: string | null
+          encrypted_username: string | null
           id: string
           last_used_at: string | null
           updated_at: string | null
@@ -1252,6 +1269,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           encrypted_credentials: string
+          encrypted_password?: string | null
+          encrypted_username?: string | null
           id?: string
           last_used_at?: string | null
           updated_at?: string | null
@@ -1260,6 +1279,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           encrypted_credentials?: string
+          encrypted_password?: string | null
+          encrypted_username?: string | null
           id?: string
           last_used_at?: string | null
           updated_at?: string | null
@@ -1493,7 +1514,9 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_active: boolean | null
           name: string
+          schedule_name: string | null
           term_code: string | null
           updated_at: string | null
           user_id: string
@@ -1501,7 +1524,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
+          schedule_name?: string | null
           term_code?: string | null
           updated_at?: string | null
           user_id: string
@@ -1509,7 +1534,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
+          schedule_name?: string | null
           term_code?: string | null
           updated_at?: string | null
           user_id?: string

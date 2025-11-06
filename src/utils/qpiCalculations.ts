@@ -2,7 +2,7 @@ export interface UserCourse {
   id: string;
   user_id: string;
   school_year: string;
-  semester: string;
+  semester: number;
   course_code: string;
   course_title: string;
   units: number;
@@ -133,7 +133,7 @@ export function filterBestAttempts(courses: UserCourse[]): UserCourse[] {
   return Array.from(courseMap.values());
 }
 
-export function calculateSemesterQPI(courses: UserCourse[], schoolYear: string, semester: string): number {
+export function calculateSemesterQPI(courses: UserCourse[], schoolYear: string, semester: number): number {
   const semesterCourses = courses.filter(
     (c) => c.school_year === schoolYear && c.semester === semester
   );

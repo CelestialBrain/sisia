@@ -429,7 +429,7 @@ export default function AISISScraper() {
         course.year_level,
         course.semester,
         course.category,
-        course.prerequisites ? course.prerequisites.join('; ') : ''
+        course.prerequisites || ''
       ]);
 
       const csvContent = [

@@ -31,9 +31,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface Schedule {
   id: string;
-  schedule_name: string;
+  name: string;
   term_code: string;
-  is_active: boolean;
+  is_active?: boolean;
+  user_id: string;
 }
 
 interface ScheduleBlock {
@@ -598,7 +599,7 @@ export default function ScheduleBuilder() {
       } else {
         const { error } = await supabase
           .from('user_schedules')
-          .update({ schedule_name: newName })
+          .update({ name: newName })
           .eq('id', activeSchedule.id);
         if (error) throw error;
         
@@ -731,7 +732,7 @@ export default function ScheduleBuilder() {
           .insert({
             user_id: user!.id,
             term_code: selectedTerm,
-            schedule_name: `My Schedule ${nextNum}`,
+            name: `My Schedule ${nextNum}`,
             is_active: true
           })
           .select()
@@ -974,7 +975,7 @@ export default function ScheduleBuilder() {
                       <SelectContent>
                         {schedules.map(s => (
                           <SelectItem key={s.id} value={s.id}>
-                            {s.schedule_name}
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1124,14 +1125,14 @@ export default function ScheduleBuilder() {
         <DeleteScheduleDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          scheduleName={activeSchedule?.schedule_name || ''}
+          scheduleName={activeSchedule?.name || ''}
           onConfirm={handleDeleteSchedule}
           isDeleting={isDeleting}
         />
         <RenameScheduleDialog
           open={showRenameDialog}
           onOpenChange={setShowRenameDialog}
-          currentName={activeSchedule?.schedule_name || ''}
+          currentName={activeSchedule?.name || ''}
           onRename={handleRenameSchedule}
           isRenaming={isRenaming}
         />
@@ -1144,7 +1145,7 @@ export default function ScheduleBuilder() {
           open={showShareDialog}
           onOpenChange={setShowShareDialog}
           scheduleId={activeSchedule?.id || ''}
-          scheduleName={activeSchedule?.schedule_name || ''}
+          scheduleName={activeSchedule?.name || ''}
         />
         <ImportShareDialog
           open={showImportShareDialog}

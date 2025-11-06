@@ -137,7 +137,7 @@ export function GradeTable({ requirementGroups, groupedCourses }: GradeTableProp
             units,
             grade,
             school_year: new Date().getFullYear().toString(),
-            semester: "First Semester",
+            semester: 1,
           });
         if (error) throw error;
       }

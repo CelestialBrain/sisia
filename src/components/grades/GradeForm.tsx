@@ -146,15 +146,22 @@ export function GradeForm({ grade, onClose }: GradeFormProps) {
         termCode = `${data.school_year.split('-')[0]}-${termNum}`;
       }
 
+      // Convert semester string to number
+      const semesterMap: Record<string, number> = {
+        '1st Sem': 1,
+        '2nd Sem': 2,
+        'Intercession': 3
+      };
+      const semesterNum = semesterMap[data.semester] || 1;
+
       const payload = {
         course_code: data.course_code,
         course_title: data.course_title,
         units: data.units,
         grade: data.grade,
         school_year: data.school_year,
-        semester: data.semester,
-        term_code: termCode,
-        grading_basis: data.grading_basis,
+        semester: semesterNum,
+        term: termCode,
         user_id: user.id,
         qpi_value: qpiValue,
         course_id: matchingCourse?.id || null,

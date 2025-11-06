@@ -32,7 +32,7 @@ export function hasConflictWithSchedule(
 
   return scheduleBlocks.some(block => {
     // Check if any candidate day matches the block's day
-    const daysOverlap = candidate.days_of_week?.includes(block.day_of_week);
+    const daysOverlap = candidate.days_of_week?.includes(String(block.day_of_week));
     if (!daysOverlap) return false;
 
     // Check if times overlap
@@ -95,7 +95,7 @@ export function useAISISSearch() {
     // Post-filter for days (since array overlap is complex in SQL)
     if (filters.days?.length) {
       results = results.filter(result =>
-        result.days_of_week?.some(day => filters.days?.includes(day))
+        result.days_of_week?.some(day => filters.days?.includes(Number(day)))
       );
     }
 

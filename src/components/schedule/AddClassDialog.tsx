@@ -43,7 +43,7 @@ interface AISISSchedule {
   room: string;
   instructor: string | null;
   department: string;
-  days_of_week: number[];
+  days_of_week: string[];
   start_time: string;
   end_time: string;
 }

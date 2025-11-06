@@ -43,6 +43,8 @@ interface PlanCourse extends Course {
   plan_course_id?: string;
   year_level?: number;
   semester_label?: string;
+  term_semester?: number;
+  term_year?: number;
 }
 interface GradePlannerProps {
   requirementGroups?: any[];
@@ -283,6 +285,8 @@ export function GradePlanner({
           course_code: course.course_code,
           course_title: course.course_title,
           units: course.units,
+          term_semester: course.term_semester || 1,
+          term_year: course.term_year || 1,
           grade: course.grade,
           is_from_actual: course.is_from_actual
         }).select().single();
@@ -516,7 +520,9 @@ export function GradePlanner({
         semester_label: course.semester_label,
         year_level: course.year_level,
         grade: course.grade,
-        is_from_actual: false
+        is_from_actual: false,
+        term_semester: 1,
+        term_year: course.year_level || 1
       }));
       const {
         error
