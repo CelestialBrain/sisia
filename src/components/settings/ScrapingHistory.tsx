@@ -141,14 +141,22 @@ export default function ScrapingHistory() {
   const getDataCounts = async (jobId: string): Promise<DataCounts> => {
     try {
       // Query all data counts separately to avoid deep type inference issues
-      const scheduleResult = await supabase.from('scraped_my_schedule').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const gradesResult = await supabase.from('scraped_my_grades').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const programResult = await supabase.from('scraped_my_program').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const curriculumResult = await supabase.from('scraped_curriculum').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const deptSchedulesResult = await (supabase as any).from('aisis_schedules').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const accountResult = await supabase.from('scraped_account_info').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const holdsResult = await supabase.from('scraped_hold_orders').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
-      const logsResult = await supabase.from('function_logs').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId);
+      // @ts-ignore - Supabase type inference depth
+      const scheduleResult = (await supabase.from('scraped_my_schedule').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const gradesResult = (await supabase.from('scraped_my_grades').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const programResult = (await supabase.from('scraped_my_program').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const curriculumResult = (await supabase.from('scraped_curriculum').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const deptSchedulesResult = (await supabase.from('aisis_schedules').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const accountResult = (await supabase.from('scraped_account_info').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const holdsResult = (await supabase.from('scraped_hold_orders').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
+      // @ts-ignore
+      const logsResult = (await supabase.from('function_logs').select('id', { count: 'exact', head: true }).eq('import_job_id', jobId)) as any;
 
       return {
         my_schedule: scheduleResult.count || 0,

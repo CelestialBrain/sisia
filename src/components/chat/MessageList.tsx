@@ -110,7 +110,7 @@ export function MessageList({
     <div 
       ref={scrollRef}
       onScroll={handleScroll}
-      className="py-4 pb-4 space-y-0 overflow-y-auto flex-1 px-4"
+      className="py-4 pb-2 space-y-0 overflow-y-auto flex-1 px-4"
     >
       {isLoadingMore && (
         <div className="flex justify-center py-2">

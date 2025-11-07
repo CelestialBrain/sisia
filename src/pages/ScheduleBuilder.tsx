@@ -34,7 +34,7 @@ interface Schedule {
   name: string;
   term_code: string;
   is_active?: boolean;
-  user_id: string;
+  user_id?: string;
 }
 
 interface ScheduleBlock {
@@ -96,7 +96,7 @@ export default function ScheduleBuilder() {
         logger.info('schedule', 'Creating guest schedule for new term', { term: selectedTerm });
         const newSchedule: Schedule = {
           id: guestStorage.generateId(),
-          schedule_name: 'My Schedule 1',
+          name: 'My Schedule 1',
           term_code: selectedTerm,
           is_active: true
         };
@@ -166,12 +166,12 @@ export default function ScheduleBuilder() {
         try {
           const { data, error } = await supabase
             .from('user_schedules')
-            .insert({
+            .insert([{
               user_id: user.id,
               term_code: selectedTerm,
-              schedule_name: 'My Schedule 1',
+              name: 'My Schedule 1',
               is_active: true
-            })
+            }])
             .select()
             .single();
           if (error) throw error;
@@ -697,7 +697,7 @@ export default function ScheduleBuilder() {
         // Create new schedule as active
         const newSchedule: Schedule = {
           id: guestStorage.generateId(),
-          schedule_name: `My Schedule ${nextNum}`,
+          name: `My Schedule ${nextNum}`,
           term_code: selectedTerm,
           is_active: true
         };

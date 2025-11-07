@@ -11,7 +11,7 @@ interface RequirementRule {
   id: string;
   rule_type: string;
   course_ids: string[] | null;
-  units_override: number | null;
+  units_override?: number | null;
   tag_pattern: string | null;
   code_prefix: string | null;
 }

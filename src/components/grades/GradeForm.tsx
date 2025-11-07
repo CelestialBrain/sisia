@@ -105,12 +105,13 @@ export function GradeForm({ grade, onClose }: GradeFormProps) {
       }
       
       // Try to find matching course in courses table (prefer user's school, but allow university-wide)
-      const { data: userProgram } = await supabase
+      // @ts-ignore - Supabase type inference depth
+      const { data: userProgram } = (await supabase
         .from("user_programs")
         .select("program_id, programs(school_id)")
         .eq("user_id", user.id)
         .eq("is_primary", true)
-        .maybeSingle();
+        .maybeSingle()) as any;
 
       const userSchoolId = (userProgram?.programs as any)?.school_id;
 

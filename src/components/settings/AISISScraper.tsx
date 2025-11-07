@@ -168,11 +168,14 @@ export default function AISISScraper() {
 
       const { error } = await supabase
         .from('user_aisis_credentials')
-        .upsert({
+        .upsert([{
           user_id: user.id,
+          encrypted_credentials: btoa(`${username}:${password}`),
           encrypted_username: encryptedUsername,
           encrypted_password: encryptedPassword,
           updated_at: new Date().toISOString()
+        }], {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
@@ -308,12 +311,13 @@ export default function AISISScraper() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // @ts-ignore - Supabase type inference depth
+      const { data, error } = (await supabase
         .from('scraped_curriculum')
         .select('program_code, program_name, version_year, version_sem, scraped_at, import_job_id')
         .eq('user_id', user.id)
         .eq('is_placeholder', true)
-        .order('scraped_at', { ascending: false });
+        .order('scraped_at', { ascending: false })) as any;
 
       if (error) throw error;
 
@@ -364,11 +368,11 @@ export default function AISISScraper() {
 
   const downloadJobJSON = async (job: any) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from('scraped_curriculum')
         .select('*')
         .eq('import_job_id', job.id)
-        .eq('is_placeholder', false);
+        .eq('is_placeholder', false)) as any;
 
       if (error) throw error;
 

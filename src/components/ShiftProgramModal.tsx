@@ -147,14 +147,15 @@ export function ShiftProgramModal({
       } else {
         // For authenticated users, use Supabase
         // 1. Check if an enrollment already exists with this combination
-        const { data: existingEnrollment } = await supabase
+        // @ts-ignore - Supabase type inference depth
+        const { data: existingEnrollment } = (await supabase
           .from('program_enrollments')
           .select('id')
           .eq('user_id', user!.id)
           .eq('program_id', selectedProgram)
           .eq('start_term', effectiveTerm)
-          .neq('id', currentEnrollment.id) // Exclude current enrollment
-          .maybeSingle();
+          .neq('id', currentEnrollment.id)
+          .maybeSingle()) as any;
 
         if (existingEnrollment) {
           toast({

@@ -190,7 +190,12 @@ export function AddClassDialog({ open, onOpenChange, onAdd, isAdding, currentTer
     setStartTime(match.start_time.substring(0, 5));
     setEndTime(match.end_time.substring(0, 5));
     
-    setSelectedDays(match.days_of_week);
+    // Convert day strings to numbers
+    const dayMap: Record<string, number> = {
+      'M': 1, 'T': 2, 'W': 3, 'TH': 4, 'F': 5, 'SAT': 6, 'SUN': 7
+    };
+    const dayNumbers = match.days_of_week.map(d => dayMap[d.toUpperCase()] || 0).filter(d => d > 0);
+    setSelectedDays(dayNumbers);
     
     // Auto-fill selected match
     onAdd({
@@ -199,7 +204,7 @@ export function AddClassDialog({ open, onOpenChange, onAdd, isAdding, currentTer
       room: match.room,
       instructor: match.instructor || undefined,
       courseTitle: match.course_title,
-      days: match.days_of_week,
+      days: dayNumbers,
       startTime: match.start_time.substring(0, 5),
       endTime: match.end_time.substring(0, 5),
       color,

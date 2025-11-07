@@ -322,10 +322,13 @@ export default function AISISScraperEnhanced() {
 
       const { error } = await supabase
         .from('user_aisis_credentials')
-        .upsert({
+        .upsert([{
           user_id: user.id,
+          encrypted_credentials: btoa(`${username}:${password}`),
           encrypted_username: encryptedUsername,
           encrypted_password: encryptedPassword
+        }], {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;

@@ -105,7 +105,7 @@ export function ChatInput({
 
   if (disabled) {
     return (
-      <div className="border-t p-4 text-center space-y-3">
+      <div className="border-t px-4 pt-4 pb-2 text-center space-y-3">
         <p className="text-sm text-muted-foreground">
           Sign in to join the conversation
         </p>

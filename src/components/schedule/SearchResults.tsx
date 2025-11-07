@@ -45,12 +45,12 @@ export function SearchResults({
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  const formatDays = (days: number[] | null) => {
+  const formatDays = (days: number[] | string[] | null) => {
     if (!days) return 'N/A';
     const dayMap: Record<number, string> = {
       1: 'M', 2: 'T', 3: 'W', 4: 'TH', 5: 'F', 6: 'SAT', 7: 'SUN'
     };
-    return days.map(d => dayMap[d] || '?').join(', ');
+    return days.map(d => typeof d === 'number' ? (dayMap[d] || '?') : d).join(', ');
   };
 
   const formatTime = (time: string | null) => {

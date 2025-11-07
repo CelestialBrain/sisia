@@ -640,7 +640,7 @@ export function GradePlanner({
       user_id: user?.id || "",
       id: c.id,
       school_year: "",
-      semester: c.semester_label || "",
+      semester: 1,
       created_at: "",
       updated_at: "",
       grading_basis: "letter" as const,

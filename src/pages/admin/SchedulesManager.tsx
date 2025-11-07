@@ -59,7 +59,8 @@ export function SchedulesManager() {
         query = query.eq('import_source', filterDepartment);
       }
 
-      const { data, error } = await query.limit(100);
+      // @ts-ignore - Supabase type inference depth
+      const { data, error } = (await query.limit(100)) as any;
       if (error) throw error;
       return data;
     }

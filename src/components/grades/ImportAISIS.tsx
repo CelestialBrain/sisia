@@ -50,12 +50,13 @@ export function ImportAISIS() {
       
       // Check program mismatch (skip for guests)
       if (parsed.detectedProgram && user && !isGuest) {
+        // @ts-ignore - Supabase type inference depth
         const { data: userProgram } = await supabase
           .from("user_programs")
           .select("programs(code, name)")
           .eq("user_id", user.id)
           .eq("is_primary", true)
-          .maybeSingle();
+          .maybeSingle() as any;
         
         if (userProgram?.programs) {
           const userProgramCode = (userProgram.programs as any).code;
