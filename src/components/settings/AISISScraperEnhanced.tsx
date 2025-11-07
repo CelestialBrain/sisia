@@ -641,7 +641,7 @@ export default function AISISScraperEnhanced() {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your AISIS username"
+                  placeholder="your.email@student.ateneo.edu"
                 />
               </div>
               <div>

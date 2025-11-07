@@ -2,10 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { clientLogger } from "@/utils/clientLogger";
+import { errorHandler } from "@/utils/errorHandler";
 
 // Initialize logging interceptors
 import "./utils/networkLogger";
 import "./utils/userActionLogger";
+
+// Initialize global error handler
+errorHandler.initialize();
 
 // Check if scroll is currently locked by an overlay (Select, Dialog, etc.)
 function isScrollLocked() {

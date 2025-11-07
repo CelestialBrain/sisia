@@ -14,8 +14,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const profileSchema = z.object({
   display_name: z.string().min(1, "Display name is required").max(100),
-  entry_year: z.string().regex(/^\d{4}-\d{4}$/, "Format must be YYYY-YYYY").optional().or(z.literal("")),
-  student_number: z.string().max(50).optional().or(z.literal("")),
+  entry_year: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Format must be YYYY-MM (e.g., 2021-08)").optional().or(z.literal("")),
+  student_number: z.string().regex(/^2\d{5}$/, "Student ID must be 6 digits starting with 2 (e.g., 212345)").optional().or(z.literal("")),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -144,11 +144,11 @@ export function ProfileForm() {
       </div>
 
           <div className="space-y-2">
-        <Label htmlFor="entry_year">Entry Year</Label>
+        <Label htmlFor="entry_year">Entry Year and Month</Label>
         <Input
           id="entry_year"
           {...register("entry_year")}
-          placeholder="2020-2024"
+          placeholder="2021-08 (YYYY-MM)"
         />
         {errors.entry_year && (
           <p className="text-sm text-destructive">{errors.entry_year.message}</p>
@@ -156,11 +156,11 @@ export function ProfileForm() {
       </div>
 
           <div className="space-y-2">
-        <Label htmlFor="student_number">Student Number</Label>
+        <Label htmlFor="student_number">Student ID</Label>
         <Input
           id="student_number"
           {...register("student_number")}
-          placeholder="2020-12345"
+          placeholder="212345 (6 digits starting with 2)"
         />
         {errors.student_number && (
           <p className="text-sm text-destructive">{errors.student_number.message}</p>

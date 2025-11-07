@@ -72,7 +72,7 @@ export default function Signup() {
               <Input
                 id="email"
                 type="email"
-                placeholder="your.email@obf.ateneo.edu"
+                placeholder="your.email@student.ateneo.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
