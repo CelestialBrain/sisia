@@ -90,28 +90,30 @@ export function CourseChecklist({ userProgram, curriculumVersion }: CourseCheckl
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-full max-w-md" />
-        
-        <div className="space-y-3">
-          <div className="flex gap-3 flex-wrap">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-36" />
-            <Skeleton className="h-10 w-24" />
-          </div>
+        <div className="flex gap-4">
+          <Skeleton className="h-10 w-full max-w-md" />
         </div>
-
+        
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Skeleton className="h-6 w-48 max-w-full" />
-                  <Skeleton className="h-5 w-24" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border rounded-lg">
+                <div className="px-4 py-4">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-6 w-48 max-w-full" />
+                    <Skeleton className="h-5 w-32" />
+                  </div>
+                  <Skeleton className="h-2 w-full mt-2" />
                 </div>
-                <Skeleton className="h-2 w-full mt-2" />
-              </CardHeader>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

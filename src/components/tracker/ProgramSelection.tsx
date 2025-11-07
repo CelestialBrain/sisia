@@ -325,18 +325,18 @@ export function ProgramSelection({ onProgramSelected }: ProgramSelectionProps) {
     return (
       <Card>
         <CardHeader>
-          <Skeleton className="h-7 w-48 max-w-full mb-1" />
+          <Skeleton className="h-7 w-48 max-w-full" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
             <div className="space-y-3">
-              <Skeleton className="h-6 w-32 mb-3" />
-              <Skeleton className="h-10 w-full mb-2" />
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
             <div className="space-y-3">
-              <Skeleton className="h-6 w-40 mb-3" />
+              <Skeleton className="h-6 w-32" />
               <Skeleton className="h-10 w-full" />
             </div>
             <Skeleton className="h-11 w-full" />

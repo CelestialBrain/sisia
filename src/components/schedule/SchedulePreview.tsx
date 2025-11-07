@@ -176,9 +176,15 @@ export function SchedulePreview() {
 
   if (scheduleLoading || blocksLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-[300px] w-full" />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <Skeleton className="h-9 w-28" />
+        </div>
+        <Skeleton className="h-[300px] w-full rounded-lg" />
       </div>
     );
   }

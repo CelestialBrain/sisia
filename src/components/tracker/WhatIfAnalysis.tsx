@@ -120,18 +120,18 @@ export function WhatIfAnalysis({ currentEnrollment }: WhatIfAnalysisProps) {
     return (
       <Card>
         <CardHeader>
-          <Skeleton className="h-7 w-48 max-w-full mb-1" />
+          <Skeleton className="h-7 w-48 max-w-full" />
           <Skeleton className="h-4 w-full max-w-md" />
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             <div className="grid gap-4">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-32" />
+              <div>
+                <Skeleton className="h-5 w-32 mb-2" />
                 <Skeleton className="h-10 w-full" />
               </div>
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
+              <div>
+                <Skeleton className="h-5 w-40 mb-2" />
                 <Skeleton className="h-10 w-full" />
               </div>
             </div>
