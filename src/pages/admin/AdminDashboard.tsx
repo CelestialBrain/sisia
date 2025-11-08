@@ -3,7 +3,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { BookOpen, GraduationCap, BookMarked, BarChart3, CheckCircle2, Building2, Database, ArrowLeftRight, Calendar, FileText } from 'lucide-react';
+import { BookOpen, GraduationCap, BookMarked, BarChart3, CheckCircle2, Building2, Database, ArrowLeftRight, Calendar, FileText, FileSearch } from 'lucide-react';
 import { ProgramsManager } from './ProgramsManager';
 import { CoursesManager } from './CoursesManager';
 import CurriculumManager from './CurriculumManager';
@@ -14,6 +14,7 @@ import { DataManagement } from './DataManagement';
 import { EquivalenciesManager } from './EquivalenciesManager';
 import { SchedulesManager } from './SchedulesManager';
 import { AdminLogs } from '@/components/admin/AdminLogs';
+import ScrapedDataReview from './ScrapedDataReview';
 import { useAuth } from '@/contexts/AuthContext';
 const ADMIN_TABS = [{
   value: 'stats',
@@ -47,6 +48,10 @@ const ADMIN_TABS = [{
   value: 'validation',
   label: 'Validation',
   icon: CheckCircle2
+}, {
+  value: 'scraped',
+  label: 'Scraped Data',
+  icon: FileSearch
 }, {
   value: 'data',
   label: 'Data Management',
@@ -158,6 +163,12 @@ export default function AdminDashboard() {
         <TabsContent value="validation" className="mt-3">
           <div className="space-y-3">
             <ValidationDashboard />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="scraped" className="mt-3">
+          <div className="space-y-3">
+            <ScrapedDataReview />
           </div>
         </TabsContent>
 

@@ -20,6 +20,7 @@ import Chat from "./pages/Chat";
 import ScheduleBuilder from "./pages/ScheduleBuilder";
 import Logs from "./pages/Logs";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import ScrapedDataReview from "./pages/admin/ScrapedDataReview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -62,6 +63,7 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/scraped-data" element={<AdminRoute><ScrapedDataReview /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -368,6 +368,7 @@ export default function AISISScraper() {
 
   const downloadJobJSON = async (job: any) => {
     try {
+      // @ts-ignore - Supabase type inference depth
       const { data, error } = (await supabase
         .from('scraped_curriculum')
         .select('*')

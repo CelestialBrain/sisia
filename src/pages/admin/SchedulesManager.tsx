@@ -56,6 +56,7 @@ export function SchedulesManager() {
         query = query.eq('term_code', filterTerm);
       }
       if (filterDepartment) {
+        // @ts-ignore - Supabase type inference depth
         query = query.eq('import_source', filterDepartment);
       }
 

@@ -1030,6 +1030,53 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_migrations: {
+        Row: {
+          admin_user_id: string | null
+          created_at: string | null
+          id: string
+          migrated_at: string | null
+          scrape_job_id: string | null
+          source_id: string
+          source_table: string
+          status: string | null
+          target_id: string | null
+          target_table: string
+        }
+        Insert: {
+          admin_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          migrated_at?: string | null
+          scrape_job_id?: string | null
+          source_id: string
+          source_table: string
+          status?: string | null
+          target_id?: string | null
+          target_table: string
+        }
+        Update: {
+          admin_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          migrated_at?: string | null
+          scrape_job_id?: string | null
+          source_id?: string
+          source_table?: string
+          status?: string | null
+          target_id?: string | null
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrape_migrations_scrape_job_id_fkey"
+            columns: ["scrape_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scraped_account_info: {
         Row: {
           created_at: string | null
@@ -1065,12 +1112,16 @@ export type Database = {
       }
       scraped_curriculum: {
         Row: {
+          approved_at: string | null
+          approved_by_admin: string | null
           category: string | null
           course_code: string | null
           course_title: string | null
           courses: Json | null
           created_at: string | null
           id: string
+          migrated_to_curriculum_id: string | null
+          migration_status: string | null
           prerequisites: string | null
           program_code: string
           program_name: string | null
@@ -1084,12 +1135,16 @@ export type Database = {
           year_level: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by_admin?: string | null
           category?: string | null
           course_code?: string | null
           course_title?: string | null
           courses?: Json | null
           created_at?: string | null
           id?: string
+          migrated_to_curriculum_id?: string | null
+          migration_status?: string | null
           prerequisites?: string | null
           program_code: string
           program_name?: string | null
@@ -1103,12 +1158,16 @@ export type Database = {
           year_level?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by_admin?: string | null
           category?: string | null
           course_code?: string | null
           course_title?: string | null
           courses?: Json | null
           created_at?: string | null
           id?: string
+          migrated_to_curriculum_id?: string | null
+          migration_status?: string | null
           prerequisites?: string | null
           program_code?: string
           program_name?: string | null
@@ -1121,7 +1180,15 @@ export type Database = {
           version_year?: number | null
           year_level?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_curriculum_migrated_to_curriculum_id_fkey"
+            columns: ["migrated_to_curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraped_hold_orders: {
         Row: {
@@ -1230,6 +1297,8 @@ export type Database = {
           course_code: string
           created_at: string | null
           id: string
+          migrated_to_schedule_id: string | null
+          migration_status: string | null
           schedule: string | null
           section: string | null
           term: string
@@ -1239,6 +1308,8 @@ export type Database = {
           course_code: string
           created_at?: string | null
           id?: string
+          migrated_to_schedule_id?: string | null
+          migration_status?: string | null
           schedule?: string | null
           section?: string | null
           term: string
@@ -1248,6 +1319,8 @@ export type Database = {
           course_code?: string
           created_at?: string | null
           id?: string
+          migrated_to_schedule_id?: string | null
+          migration_status?: string | null
           schedule?: string | null
           section?: string | null
           term?: string
