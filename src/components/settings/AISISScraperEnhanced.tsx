@@ -729,7 +729,6 @@ export default function AISISScraperEnhanced() {
               even if you close this page.
             </AlertDescription>
           </Alert>
-
           {/* Scraping Options */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Data to Scrape</Label>
@@ -768,15 +767,15 @@ export default function AISISScraperEnhanced() {
               </div>
             </div>
           </div>
-
+          aaaaaa
           {/* Start Button */}
           <Button onClick={startScraping} disabled={!hasCredentials || isScrapingRunning} className="w-full" size="lg">
             <Play className="w-4 h-4 mr-2" />
             Start Scraping
           </Button>
-          <Button onClick={noobScraper} disabled={false} className="w-full" size="lg">
+          <Button onClick={noobScraper} className="w-full" size="lg">
             <Play className="w-4 h-4 mr-2" />
-            Noob Scrapper
+            Noob Scrapper!
           </Button>
         </CardContent>
       </Card>
