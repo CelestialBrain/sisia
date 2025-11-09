@@ -2054,7 +2054,7 @@ async function scrapeMySchedule(cookies: string, sessionId: string, userId: stri
   const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
   const html = await response.text();
   console.log(`[MY_SCHEDULE] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped my schedule (${html.length} bytes)`);
+  // await recordLog(client, jobId, "info", `Scraped my schedule (${html.length} bytes)`);
   await recordLog(client, jobId, "info", `schedule: ${html}`);
 }
 
