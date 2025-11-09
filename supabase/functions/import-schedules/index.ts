@@ -167,6 +167,19 @@ Deno.serve(async (req) => {
 
   } catch (error: any) {
     console.error('Import schedules error:', error);
+    
+    // Log top-level error to function_logs
+    try {
+      const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await serviceClient.from('function_logs').insert({
+        function_name: 'import-schedules',
+        level: 'error',
+        event_type: 'error',
+        event_message: 'Import schedules error',
+        details: { error: error.message, stack: error.stack }
+      });
+    } catch (_) {}
+    
     return new Response(
       JSON.stringify({ error: error?.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -292,9 +305,22 @@ async function processImportInBackground(
 
     if (payload.schedules.length > 0) {
       for (let i = 0; i < payload.schedules.length; i += batchSize) {
+        // Whitelist only valid columns from aisis_schedules table
         const batch = payload.schedules.slice(i, i + batchSize).map((schedule: any) => ({
-          ...schedule,
-          import_source: payload.department // Track original import source
+          subject_code: schedule.subject_code,
+          section: schedule.section,
+          course_title: schedule.course_title,
+          instructor: schedule.instructor ?? null,
+          room: schedule.room ?? null,
+          time_pattern: schedule.time_pattern ?? null,
+          start_time: schedule.start_time ?? null,
+          end_time: schedule.end_time ?? null,
+          units: typeof schedule.units === 'number' ? schedule.units : null,
+          max_capacity: typeof schedule.max_capacity === 'number' ? schedule.max_capacity : null,
+          days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week : null,
+          term_code: payload.term_code,
+          department: payload.department,
+          deprecated: false
         }));
         
         const { error: insertError } = await serviceClient
@@ -303,6 +329,7 @@ async function processImportInBackground(
 
         if (insertError) {
           console.error('Batch insert failed:', insertError);
+          await recordLog('error', 'error', `[Job ${jobId}] Batch insert failed`, { error: insertError.message });
           throw new Error(`Failed to insert schedules: ${insertError.message}`);
         }
 

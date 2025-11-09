@@ -320,7 +320,7 @@ export default function AISISScraperEnhanced() {
       const encryptedUsername = btoa(username);
       const encryptedPassword = btoa(password);
 
-      const { error } = await supabase
+      const { error: upsertError } = await supabase
         .from('user_aisis_credentials')
         .upsert([{
           user_id: user.id,
@@ -331,7 +331,21 @@ export default function AISISScraperEnhanced() {
           onConflict: 'user_id'
         });
 
-      if (error) throw error;
+      // Fallback for missing unique constraint
+      if (upsertError && upsertError.message.includes('no unique or exclusion constraint')) {
+        await supabase.from('user_aisis_credentials').delete().eq('user_id', user.id);
+        const { error: insertError } = await supabase
+          .from('user_aisis_credentials')
+          .insert({
+            user_id: user.id,
+            encrypted_credentials: btoa(`${username}:${password}`),
+            encrypted_username: encryptedUsername,
+            encrypted_password: encryptedPassword
+          });
+        if (insertError) throw insertError;
+      } else if (upsertError) {
+        throw upsertError;
+      }
 
       setHasCredentials(true);
       setUsername('');

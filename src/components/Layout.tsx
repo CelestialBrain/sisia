@@ -21,6 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import paypalLogo from '@/assets/paypal-logo.png';
 interface LayoutProps {
   children: ReactNode;
 }
@@ -249,7 +250,7 @@ export function Layout({ children }: LayoutProps) {
                   </Button>
                   <Button className="flex-1 bg-[#FFC439] hover:bg-[#FFB028] text-black font-semibold gap-2" asChild>
                     <a href="https://ko-fi.com/angelonrevelo" target="_blank" rel="noopener noreferrer">
-                      <img src="/paypal-logo.png" alt="PayPal" className="h-6" loading="eager" fetchPriority="high" />
+                      <img src={paypalLogo} alt="PayPal" className="h-6" loading="eager" fetchPriority="high" />
                     </a>
                   </Button>
                 </div>

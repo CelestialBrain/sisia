@@ -145,12 +145,16 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         status: 'pending',
+        job_type: 'curriculum_import',
         idempotency_key: idempotencyKey,
         program_name: payload.program_name,
         program_code: payload.program_code,
-        track_code: payload.track_suffix,
         version_label: payload.version_label,
         total_courses: payload.courses?.length || 0,
+        partial_data: {
+          track_suffix: payload.track_suffix,
+          track_name: payload.track_name
+        }
       })
       .select()
       .single()
@@ -211,6 +215,22 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Import endpoint error:', error)
+    
+    // Log top-level error to function_logs
+    try {
+      const serviceClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      )
+      await serviceClient.from('function_logs').insert({
+        function_name: 'import-curriculum',
+        level: 'error',
+        event_type: 'error',
+        event_message: 'Import endpoint error',
+        details: { error: error.message, stack: error.stack }
+      })
+    } catch (_) {}
+    
     return new Response(JSON.stringify({
       error: error.message || 'Internal server error'
     }), {

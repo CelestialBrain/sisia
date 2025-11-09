@@ -367,6 +367,19 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log top-level error to function_logs
+    try {
+      const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await serviceClient.from('function_logs').insert({
+        function_name: 'aisis-scraper',
+        level: 'error',
+        event_type: 'error',
+        event_message: 'AISIS scraper error',
+        details: { error: errorMessage, stack: error instanceof Error ? error.stack : undefined }
+      });
+    } catch (_) {}
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
