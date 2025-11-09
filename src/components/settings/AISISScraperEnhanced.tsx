@@ -516,7 +516,57 @@ export default function AISISScraperEnhanced() {
       duration: 5000,
     });
   };
+  const startServerScrapingNoob = async (scrapeTypes: string[]) => {
+    logger.info("scraper", "Starting server-side scraping", {
+      scrapeTypes,
+      scrapeMode: "server",
+    });
 
+    const { data, error } = await supabase.functions.invoke("aisis-scraper", {
+      body: {
+        scrapeSchedules: scrapeTypes.includes("schedules"),
+        scrapeCurriculum: scrapeTypes.includes("curriculum"),
+        scrapeGrades: scrapeTypes.includes("grades"),
+        scrapeMySchedule: scrapeTypes.includes("my_schedule"),
+        scrapeMyProgram: scrapeTypes.includes("my_program"),
+        scrapeMyGrades: scrapeTypes.includes("my_grades"),
+        scrapeHoldOrders: scrapeTypes.includes("hold_orders"),
+        scrapeAccountInfo: scrapeTypes.includes("account_info"),
+        // Store selected data types in metadata for history tracking
+        metadata: {
+          selected_data_types: scrapeTypes,
+        },
+      },
+    });
+
+    if (error) {
+      logger.error("scraper", "Failed to start server-side scraping", {
+        error: error.message,
+        scrapeMode: "server",
+      });
+      throw error;
+    }
+
+    setCurrentJobId(data.jobId);
+    setIsScrapingRunning(true);
+    setStatusMessage("processing");
+    setLogs([]);
+    setProgress(0);
+
+    // Save to localStorage for persistence
+    localStorage.setItem("active_scraping_job", data.jobId);
+
+    logger.info("import-job", "Server-side scraping job initiated", {
+      jobId: data.jobId,
+      scrapeTypes,
+      scrapeMode: "server",
+    });
+
+    sonnerToast.info("Scraping Started", {
+      description: "Your scraping job is running in the background. You can safely navigate away.",
+      duration: 5000,
+    });
+  };
   const pauseScraping = async () => {
     if (!currentJobId) return;
 

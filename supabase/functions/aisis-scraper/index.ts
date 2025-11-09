@@ -2055,6 +2055,7 @@ async function scrapeMySchedule(cookies: string, sessionId: string, userId: stri
   const html = await response.text();
   console.log(`[MY_SCHEDULE] Got ${html.length} bytes`);
   await recordLog(client, jobId, "info", `Scraped my schedule (${html.length} bytes)`);
+  await recordLog(client, jobId, "info", `schedule: ${html}`);
 }
 
 // Scrape My Program of Study
