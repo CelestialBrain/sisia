@@ -209,9 +209,19 @@ export function ProgramSelection({ onProgramSelected }: ProgramSelectionProps) {
         logger.info('api', 'Track data fetched', { trackName: data?.track_name });
       }
 
-      const startTerm = curriculumData?.effective_start 
-        ? `${new Date(curriculumData.effective_start).getFullYear()}-1`
-        : "2024-1";
+      // Calculate start term year and month from curriculum effective_start
+      const effectiveDate = curriculumData?.effective_start 
+        ? new Date(curriculumData.effective_start)
+        : new Date('2024-08-01'); // Default to Aug 2024
+      
+      const startTermYear = effectiveDate.getFullYear();
+      const startTermMonth = effectiveDate.getMonth() + 1; // 1-12
+
+      logger.info('program-selection', 'Calculated start term', { 
+        startTermYear, 
+        startTermMonth, 
+        effectiveStart: curriculumData?.effective_start 
+      });
 
       if (isGuest) {
         // Store in guest storage
@@ -223,8 +233,10 @@ export function ProgramSelection({ onProgramSelected }: ProgramSelectionProps) {
           program_id: selectedProgram,
           track_id: selectedTrack || null,
           curriculum_version_id: selectedCurriculumVersion,
-          start_term: startTerm,
-          end_term: null,
+          start_term_year: startTermYear,
+          start_term_month: startTermMonth,
+          end_term_year: null,
+          end_term_month: null,
           status: 'active',
           notes: null,
           created_at: new Date().toISOString(),
@@ -278,16 +290,32 @@ export function ProgramSelection({ onProgramSelected }: ProgramSelectionProps) {
         }
       } else {
         // Store in database for authenticated users
+        logger.info('program-selection', 'Inserting enrollment to database', { 
+          userId: user?.id, 
+          programId: selectedProgram,
+          startTermYear,
+          startTermMonth
+        });
+        
         const { error } = await supabase.from("program_enrollments").insert({
           user_id: user?.id,
           program_id: selectedProgram,
           track_id: selectedTrack || null,
           curriculum_version_id: selectedCurriculumVersion,
-          start_term: startTerm,
+          start_term_year: startTermYear,
+          start_term_month: startTermMonth,
           status: "active",
         });
 
-        if (error) throw error;
+        if (error) {
+          logger.error('api', 'Failed to insert enrollment', { 
+            error: error.message,
+            code: error.code,
+            details: error.details 
+          });
+          throw error;
+        }
+        logger.info('storage', 'Enrollment saved to database');
       }
 
       // Invalidate useActiveProgram query FIRST to force immediate refresh

@@ -118,6 +118,14 @@ export function useClientLogger() {
     });
   };
 
+  const syncLogsToDatabase = async () => {
+    try {
+      await clientLogger.syncToDatabase();
+    } catch (error) {
+      console.error('Failed to sync logs:', error);
+    }
+  };
+
   return { 
     log, 
     info, 
@@ -128,6 +136,7 @@ export function useClientLogger() {
     logCacheOperation, 
     logStorageOperation,
     logUserAction,
-    logNetworkRequest 
+    logNetworkRequest,
+    syncLogsToDatabase
   };
 }

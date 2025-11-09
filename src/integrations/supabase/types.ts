@@ -211,6 +211,51 @@ export type Database = {
         }
         Relationships: []
       }
+      client_logs: {
+        Row: {
+          app_version: string | null
+          build_time: string | null
+          category: string
+          created_at: string
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          page_url: string | null
+          user_agent: string | null
+          user_id: string | null
+          user_type: string
+        }
+        Insert: {
+          app_version?: string | null
+          build_time?: string | null
+          category: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          page_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_type: string
+        }
+        Update: {
+          app_version?: string | null
+          build_time?: string | null
+          category?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          page_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_type?: string
+        }
+        Relationships: []
+      }
       course_equivalencies: {
         Row: {
           created_at: string | null
@@ -644,10 +689,13 @@ export type Database = {
         Row: {
           created_at: string | null
           curriculum_version_id: string | null
-          end_term: string | null
+          end_term_month: number | null
+          end_term_year: number | null
           id: string
           is_active: boolean | null
           program_id: string
+          start_term_month: number | null
+          start_term_year: number | null
           status: string | null
           track_id: string | null
           updated_at: string | null
@@ -656,10 +704,13 @@ export type Database = {
         Insert: {
           created_at?: string | null
           curriculum_version_id?: string | null
-          end_term?: string | null
+          end_term_month?: number | null
+          end_term_year?: number | null
           id?: string
           is_active?: boolean | null
           program_id: string
+          start_term_month?: number | null
+          start_term_year?: number | null
           status?: string | null
           track_id?: string | null
           updated_at?: string | null
@@ -668,10 +719,13 @@ export type Database = {
         Update: {
           created_at?: string | null
           curriculum_version_id?: string | null
-          end_term?: string | null
+          end_term_month?: number | null
+          end_term_year?: number | null
           id?: string
           is_active?: boolean | null
           program_id?: string
+          start_term_month?: number | null
+          start_term_year?: number | null
           status?: string | null
           track_id?: string | null
           updated_at?: string | null

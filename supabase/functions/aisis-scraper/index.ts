@@ -330,18 +330,19 @@ Deno.serve(async (req) => {
         user_id: user.id,
         job_type: 'aisis_scrape',
         status: 'pending',
-        scrape_mode: 'server',
         progress: 0,
         partial_data: {
           selected_data_types: scrapingTypes,
-          start_time: new Date().toISOString()
+          start_time: new Date().toISOString(),
+          scrape_mode: 'server'
         }
       })
       .select()
       .single();
 
     if (jobError || !job) {
-      throw new Error('Failed to create import job');
+      console.error('[SCRAPER] Failed to create import job:', jobError);
+      throw new Error(`Failed to create import job: ${jobError?.message || 'Unknown error'}`);
     }
 
     // Start background processing with scraping types

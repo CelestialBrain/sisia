@@ -501,7 +501,7 @@ async function processImportInBackground(
       const uniqueCodesInBatch = Array.from(new Set(allBatchCodes))
       const { data: existingCourses } = await serviceClient
         .from('courses')
-        .select('id, course_code, is_university_wide')
+        .select('id, course_code')
         .in('course_code', uniqueCodesInBatch)
       
       const existingMap = new Map(existingCourses?.map((c: any) => [c.course_code, c]) || [])
@@ -525,7 +525,6 @@ async function processImportInBackground(
               course_title: course.course_title,
               units: course.units,
               school_id: payload.school_id,
-              is_university_wide: false,
               prereq_expr: course.prerequisites?.join(' AND ') || null,
               category_tags: course.category ? [course.category] : null
             })

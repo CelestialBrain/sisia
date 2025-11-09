@@ -293,7 +293,7 @@ async function processImportInBackground(
         .from('aisis_schedules')
         .update({ deprecated: true })
         .eq('term_code', payload.term_code)
-        .eq('import_source', payload.department)
+        .eq('department', payload.department)
         .eq('deprecated', false);
     }
 

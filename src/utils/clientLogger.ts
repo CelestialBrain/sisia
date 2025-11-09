@@ -413,6 +413,36 @@ class ClientLogger {
     return JSON.stringify(exportData, null, 2);
   }
 
+  // Push logs to database for persistent server-side logging
+  async syncToDatabase() {
+    if (!this.initialized || this.logs.length === 0) {
+      return;
+    }
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const recentLogs = this.logs.slice(-50); // Only sync last 50 logs
+      
+      const logsToSync = recentLogs.map(log => ({
+        user_id: log.userId || null,
+        user_type: log.userType,
+        level: log.level,
+        category: log.category,
+        message: log.message,
+        details: log.details || null,
+        page_url: window.location.href,
+        user_agent: navigator.userAgent,
+        app_version: log.version,
+        build_time: log.buildTime
+      }));
+
+      await supabase.from('client_logs').insert(logsToSync);
+      console.log(`[ClientLogger] Synced ${logsToSync.length} logs to database`);
+    } catch (error) {
+      console.error('[ClientLogger] Failed to sync logs to database:', error);
+    }
+  }
+
   getBuildInfo() {
     return this.buildInfo;
   }
