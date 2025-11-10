@@ -213,14 +213,32 @@ export default function AISISScraperEnhanced() {
         (payload) => {
           setLogs((prev) => [...prev, payload.new]);
         },
-      )
-      .subscribe();
+        )
+        .subscribe();
+
+    // Add a timeout to show initial message if no logs appear within 3 seconds
+    const initialTimeout = setTimeout(() => {
+      if (logs.length === 0) {
+        setLogs([{
+          id: 'temp-starting',
+          function_name: 'aisis-scraper',
+          level: 'INFO',
+          event_message: 'Initializing scraper',
+          details: 'Connecting to AISIS and preparing to fetch data...',
+          created_at: new Date().toISOString(),
+          import_job_id: currentJobId,
+          event_type: 'init',
+          metadata: null
+        } as any]);
+      }
+    }, 3000);
 
     return () => {
       channel.unsubscribe();
       logsChannel.unsubscribe();
+      clearTimeout(initialTimeout);
     };
-  }, [currentJobId]);
+  }, [currentJobId, logs.length]);
 
   // Client-side timeout detection for stuck jobs
   useEffect(() => {
@@ -291,6 +309,21 @@ export default function AISISScraperEnhanced() {
 
     if (!error && data) {
       setLogs(data);
+      
+      // If no logs yet, add a placeholder to show scraping has started
+      if (data.length === 0) {
+        setLogs([{
+          id: 'temp-init',
+          function_name: 'aisis-scraper',
+          level: 'INFO',
+          event_message: 'Scraping job initialized',
+          details: 'Starting to fetch curriculum data...',
+          created_at: new Date().toISOString(),
+          import_job_id: jobId,
+          event_type: 'init',
+          metadata: null
+        } as any]);
+      }
     }
   };
 
@@ -843,7 +876,10 @@ export default function AISISScraperEnhanced() {
               <ScrollArea className="h-[200px] mt-2 border rounded-md p-4 bg-muted/50">
                 <div className="space-y-1 font-mono text-xs">
                   {logs.length === 0 ? (
-                    <p className="text-muted-foreground">Waiting for logs...</p>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                      <span>Initializing scraper and connecting to AISIS...</span>
+                    </div>
                   ) : (
                     logs.map((log, i) => {
                       // Extract batch information if available

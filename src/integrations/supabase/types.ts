@@ -1137,6 +1137,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          import_job_id: string | null
           program: string | null
           student_id: string | null
           user_id: string
@@ -1147,6 +1148,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          import_job_id?: string | null
           program?: string | null
           student_id?: string | null
           user_id: string
@@ -1157,12 +1159,21 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          import_job_id?: string | null
           program?: string | null
           student_id?: string | null
           user_id?: string
           year_level?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_account_info_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraped_curriculum: {
         Row: {
@@ -1174,6 +1185,7 @@ export type Database = {
           courses: Json | null
           created_at: string | null
           id: string
+          import_job_id: string | null
           migrated_to_curriculum_id: string | null
           migration_status: string | null
           prerequisites: string | null
@@ -1197,6 +1209,7 @@ export type Database = {
           courses?: Json | null
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           migrated_to_curriculum_id?: string | null
           migration_status?: string | null
           prerequisites?: string | null
@@ -1220,6 +1233,7 @@ export type Database = {
           courses?: Json | null
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           migrated_to_curriculum_id?: string | null
           migration_status?: string | null
           prerequisites?: string | null
@@ -1236,6 +1250,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "scraped_curriculum_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scraped_curriculum_migrated_to_curriculum_id_fkey"
             columns: ["migrated_to_curriculum_id"]
             isOneToOne: false
@@ -1249,6 +1270,7 @@ export type Database = {
           created_at: string | null
           hold_type: string | null
           id: string
+          import_job_id: string | null
           office: string | null
           reason: string | null
           status: string | null
@@ -1258,6 +1280,7 @@ export type Database = {
           created_at?: string | null
           hold_type?: string | null
           id?: string
+          import_job_id?: string | null
           office?: string | null
           reason?: string | null
           status?: string | null
@@ -1267,12 +1290,21 @@ export type Database = {
           created_at?: string | null
           hold_type?: string | null
           id?: string
+          import_job_id?: string | null
           office?: string | null
           reason?: string | null
           status?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_hold_orders_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraped_my_grades: {
         Row: {
@@ -1281,6 +1313,7 @@ export type Database = {
           created_at: string | null
           grade: string | null
           id: string
+          import_job_id: string | null
           term: string | null
           units: number | null
           user_id: string
@@ -1291,6 +1324,7 @@ export type Database = {
           created_at?: string | null
           grade?: string | null
           id?: string
+          import_job_id?: string | null
           term?: string | null
           units?: number | null
           user_id: string
@@ -1301,11 +1335,20 @@ export type Database = {
           created_at?: string | null
           grade?: string | null
           id?: string
+          import_job_id?: string | null
           term?: string | null
           units?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_my_grades_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraped_my_program: {
         Row: {
@@ -1314,6 +1357,7 @@ export type Database = {
           course_title: string | null
           created_at: string | null
           id: string
+          import_job_id: string | null
           semester: number | null
           status: string | null
           units: number | null
@@ -1326,6 +1370,7 @@ export type Database = {
           course_title?: string | null
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           semester?: number | null
           status?: string | null
           units?: number | null
@@ -1338,19 +1383,29 @@ export type Database = {
           course_title?: string | null
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           semester?: number | null
           status?: string | null
           units?: number | null
           user_id?: string
           year_level?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_my_program_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraped_my_schedule: {
         Row: {
           course_code: string
           created_at: string | null
           id: string
+          import_job_id: string | null
           migrated_to_schedule_id: string | null
           migration_status: string | null
           schedule: string | null
@@ -1362,6 +1417,7 @@ export type Database = {
           course_code: string
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           migrated_to_schedule_id?: string | null
           migration_status?: string | null
           schedule?: string | null
@@ -1373,6 +1429,7 @@ export type Database = {
           course_code?: string
           created_at?: string | null
           id?: string
+          import_job_id?: string | null
           migrated_to_schedule_id?: string | null
           migration_status?: string | null
           schedule?: string | null
@@ -1380,7 +1437,15 @@ export type Database = {
           term?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scraped_my_schedule_import_job_id_fkey"
+            columns: ["import_job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_aisis_credentials: {
         Row: {
