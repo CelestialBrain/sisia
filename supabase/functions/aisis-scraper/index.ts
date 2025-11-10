@@ -6,9 +6,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // AISIS Configuration
 const AISIS_BASE_URL = "https://aisis.ateneo.edu/j_aisis";
-const RATE_LIMIT_DELAY = 100; // 2.5 seconds between requests
+const RATE_LIMIT_DELAY = 500; // 500ms between batches
 const REQUEST_TIMEOUT = 30000; // 30 second timeout per request
 const MAX_RETRIES = 3;
+const CONCURRENT_BATCH_SIZE = 5; // Process 5 programs at once
 
 interface ScrapeRequest {
   jobId?: string;
@@ -867,155 +868,137 @@ async function scrapeCurriculum(
       totalPrograms: programsToScrape,
     });
 
-    // Scrape each program
-    for (let i = 0; i < programsToScrape; i++) {
-      const program = programs[i];
-
-      console.log(`[CURRICULUM] Program ${i + 1}/${programsToScrape}: ${program.programName} (${program.programCode})`);
-
-      await recordLog(serviceClient, jobId, "info", `Fetching curriculum for: ${program.programName}`, {
-        program_code: program.programCode,
-        program_name: program.programName,
-        version_year: program.versionYear,
-        version_sem: program.versionSem,
-        progress: `${i + 1}/${programsToScrape}`,
+    // Scrape programs in concurrent batches
+    for (let batchStart = 0; batchStart < programsToScrape; batchStart += CONCURRENT_BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + CONCURRENT_BATCH_SIZE, programsToScrape);
+      const batchNum = Math.floor(batchStart / CONCURRENT_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(programsToScrape / CONCURRENT_BATCH_SIZE);
+      
+      console.log(`[CURRICULUM] Batch ${batchNum}/${totalBatches}: Programs ${batchStart + 1}-${batchEnd}`);
+      await recordLog(serviceClient, jobId, "info", `Processing batch ${batchNum}/${totalBatches} (programs ${batchStart + 1}-${batchEnd})`, {
+        batchNum,
+        totalBatches,
+        batchStart: batchStart + 1,
+        batchEnd,
       });
 
-      // POST to get specific program curriculum with correct parameters
-      const formData = new URLSearchParams({
-        ProgCode: program.programCode,
-        VerYear: program.versionYear.toString(),
-        VerSem: program.versionSem.toString(),
-      });
-
-      const startTime = Date.now();
-      const requestUrl = `${AISIS_BASE_URL}/J_VOFC.do`;
-
-      console.log(`[HTTP] POST ${requestUrl}`);
-      console.log(`[HTTP] Body: ${formData.toString()}`);
-      console.log(`[HTTP] Cookies: ${session.cookies.substring(0, 50)}...`);
-
-      const curriculumResponse = await fetchWithTimeout(requestUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Cookie: session.cookies,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-        body: formData.toString(),
-      });
-
-      const curriculumHtml = await curriculumResponse.text();
-      const responseTime = Date.now() - startTime;
-
-      console.log(`[HTTP] Response Status: ${curriculumResponse.status}`);
-      console.log(`[HTTP] Response Size: ${curriculumHtml.length} bytes`);
-      console.log(`[HTTP] Response Time: ${responseTime}ms`);
-      console.log(`[CURRICULUM] Received ${curriculumHtml.length} bytes for ${program.programName}`);
-
-      // Save raw HTML to scraped_curriculum table FIRST (as placeholder record)
-      const { error: htmlSaveError } = await serviceClient.from("scraped_curriculum").insert({
-        user_id: userId,
-        import_job_id: jobId,
-        program_code: program.programCode,
-        program_name: program.programName,
-        version_year: program.versionYear,
-        version_sem: program.versionSem,
-        version_label: `${program.versionYear}-${program.versionSem}`,
-        track_code: null,
-        raw_html: curriculumHtml,
-        scraped_at: new Date().toISOString(),
-        // Placeholder values for required fields
-        course_code: "PLACEHOLDER",
-        course_title: "Raw HTML Data",
-        units: 0,
-        year_level: 0,
-        semester: "N/A",
-        category: "RAW_DATA",
-        prerequisites: [],
-        is_placeholder: true,
-      });
-
-      if (htmlSaveError) {
-        console.error(`[CURRICULUM] Error saving raw HTML for ${program.programName}:`, htmlSaveError);
-        await recordLog(serviceClient, jobId, "error", `Failed to save raw HTML for ${program.programName}`, {
-          error: htmlSaveError.message,
-        });
-      } else {
-        console.log(`[CURRICULUM] ✓ Saved raw HTML for ${program.programName}`);
-        await recordLog(serviceClient, jobId, "info", `Saved raw HTML for ${program.programName}`, {
-          program_code: program.programCode,
-          htmlSize: curriculumHtml.length,
-        });
+      // Check for pause before each batch
+      if (checkControl) {
+        const controlAction = await checkControl();
+        if (controlAction === "pause") {
+          console.log("[PAUSE] Pause command received during curriculum batch");
+          return;
+        }
       }
 
-      // Parse curriculum and save individual courses
-      const parsedCourses = parseCurriculumTable(curriculumHtml, userId, jobId, program, curriculumHtml);
+      // Process batch concurrently
+      const batchPrograms = programs.slice(batchStart, batchEnd);
+      const batchResults = await Promise.allSettled(
+        batchPrograms.map(async (program, idx) => {
+          const globalIdx = batchStart + idx;
+          console.log(`[CURRICULUM] Fetching ${globalIdx + 1}/${programsToScrape}: ${program.programName} (${program.programCode})`);
 
-      console.log(`[CURRICULUM] Extracted ${parsedCourses.length} courses from ${program.programName}`);
-      console.log(`[EXTRACT] Course sample:`, parsedCourses.slice(0, 2));
+          // POST to get specific program curriculum with correct parameters
+          const formData = new URLSearchParams({
+            ProgCode: program.programCode,
+            VerYear: program.versionYear.toString(),
+            VerSem: program.versionSem.toString(),
+          });
 
-      await recordLog(
-        serviceClient,
-        jobId,
-        "info",
-        `Scraped ${parsedCourses.length} courses from ${program.programName}`,
-        {
-          program_code: program.programCode,
-          program_name: program.programName,
-          course_count: parsedCourses.length,
-          version_year: program.versionYear,
-          version_sem: program.versionSem,
-        },
+          const startTime = Date.now();
+          const requestUrl = `${AISIS_BASE_URL}/J_VOFC.do`;
+
+          const curriculumResponse = await fetchWithTimeout(requestUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Cookie: session.cookies,
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+            body: formData.toString(),
+          });
+
+          const curriculumHtml = await curriculumResponse.text();
+          const responseTime = Date.now() - startTime;
+
+          console.log(`[HTTP] Program ${globalIdx + 1} - Status: ${curriculumResponse.status}, Size: ${curriculumHtml.length}B, Time: ${responseTime}ms`);
+
+          // Save raw HTML to scraped_curriculum table FIRST (as placeholder record)
+          const { error: htmlSaveError } = await serviceClient.from("scraped_curriculum").insert({
+            user_id: userId,
+            import_job_id: jobId,
+            program_code: program.programCode,
+            program_name: program.programName,
+            version_year: program.versionYear,
+            version_sem: program.versionSem,
+            version_label: `${program.versionYear}-${program.versionSem}`,
+            track_code: null,
+            raw_html: curriculumHtml,
+            scraped_at: new Date().toISOString(),
+            // Placeholder values for required fields
+            course_code: "PLACEHOLDER",
+            course_title: "Raw HTML Data",
+            units: 0,
+            year_level: 0,
+            semester: "N/A",
+            category: "RAW_DATA",
+            prerequisites: [],
+            is_placeholder: true,
+          });
+
+          if (htmlSaveError) {
+            console.error(`[CURRICULUM] Error saving raw HTML for ${program.programName}:`, htmlSaveError);
+            throw htmlSaveError;
+          }
+
+          console.log(`[CURRICULUM] ✓ Saved raw HTML for ${program.programName}`);
+
+          // Parse curriculum and save individual courses
+          const parsedCourses = parseCurriculumTable(curriculumHtml, userId, jobId, program, curriculumHtml);
+          console.log(`[CURRICULUM] Extracted ${parsedCourses.length} courses from ${program.programName}`);
+
+          // Save parsed courses to scraped_curriculum table
+          if (parsedCourses.length > 0) {
+            const { error: insertError } = await serviceClient.from("scraped_curriculum").insert(parsedCourses);
+
+            if (!insertError) {
+              console.log(`[CURRICULUM] ✓ Saved ${parsedCourses.length} parsed courses for ${program.programName}`);
+            } else {
+              console.error(`[CURRICULUM] Error saving parsed courses for ${program.programName}:`, insertError);
+              throw insertError;
+            }
+          } else {
+            console.warn(`[CURRICULUM] No courses extracted for ${program.programName}`);
+          }
+
+          return { program, parsedCourses };
+        })
       );
 
-      // Save parsed courses to scraped_curriculum table
-      if (parsedCourses.length > 0) {
-        const { error: insertError } = await serviceClient.from("scraped_curriculum").insert(parsedCourses);
+      // Log batch results
+      const successCount = batchResults.filter(r => r.status === 'fulfilled').length;
+      const failCount = batchResults.filter(r => r.status === 'rejected').length;
+      
+      console.log(`[CURRICULUM] Batch ${batchNum}/${totalBatches} complete: ${successCount} success, ${failCount} failed`);
+      await recordLog(serviceClient, jobId, "info", `Batch ${batchNum}/${totalBatches} complete`, {
+        successCount,
+        failCount,
+        batchProgress: `${batchEnd}/${programsToScrape}`,
+      });
 
-        if (!insertError) {
-          console.log(`[CURRICULUM] ✓ Saved ${parsedCourses.length} parsed courses for ${program.programName}`);
-
-          await recordLog(
-            serviceClient,
-            jobId,
-            "info",
-            `Scraped ${parsedCourses.length} courses from ${program.programName}`,
-            {
-              program_code: program.programCode,
-              program_name: program.programName,
-              course_count: parsedCourses.length,
-              version_year: program.versionYear,
-              version_sem: program.versionSem,
-            },
-          );
-        } else {
-          console.error(`[CURRICULUM] Error saving parsed courses for ${program.programName}:`, insertError);
-          await recordLog(serviceClient, jobId, "error", `Failed to save parsed courses: ${insertError.message}`, {
-            program_code: program.programCode,
-            error: insertError.message,
-            html_snippet: curriculumHtml.substring(0, 500),
-          });
+      // Log individual failures
+      batchResults.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          const globalIdx = batchStart + idx;
+          const program = batchPrograms[idx];
+          console.error(`[CURRICULUM] Failed to process ${program.programName}:`, result.reason);
         }
-      } else {
-        console.warn(`[CURRICULUM] No courses extracted for ${program.programName}`);
-        await recordLog(serviceClient, jobId, "warn", `No courses found for ${program.programName}`, {
-          program_code: program.programCode,
-          html_snippet: curriculumHtml.substring(0, 500),
-        });
+      });
+
+      // Delay between batches
+      if (batchEnd < programsToScrape) {
+        await delay(RATE_LIMIT_DELAY);
       }
-
-      // Update progress
-      await serviceClient
-        .from("import_jobs")
-        .update({
-          pages_scraped: i + 1,
-          total_pages: programsToScrape,
-          courses_processed: parsedCourses.length,
-        })
-        .eq("id", jobId);
-
-      await delay(RATE_LIMIT_DELAY);
     }
 
     console.log(`[CURRICULUM] ✓ Scraping complete: ${programsToScrape} programs`);

@@ -295,45 +295,6 @@ export default function AISISScraper() {
       });
     }
   };
-  const noobScraper = async () => {
-    if (!hasCredentials) {
-      toast({
-        title: "No Credentials",
-        description: "Please save your AISIS credentials first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (
-      !scrapeSchedules &&
-      !scrapeCurriculum &&
-      !scrapeGrades &&
-      !scrapeMySchedule &&
-      !scrapeMyProgram &&
-      !scrapeMyGrades &&
-      !scrapeHoldOrders &&
-      !scrapeAccountInfo
-    ) {
-      toast({
-        title: "No Data Selected",
-        description: "Please select at least one type of data to scrape.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      alert("weeeee");
-    } catch (error: any) {
-      setIsScrapingRunning(false);
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
   const loadJobHistory = async () => {
     try {
       const {
@@ -742,14 +703,10 @@ export default function AISISScraper() {
               </Alert>
             )}
           </div>
-          aaaaaaa
+          
           <Button onClick={startScraping} disabled={isScrapingRunning || !hasCredentials} className="w-full">
             <Play className="h-4 w-4 mr-2" />
             {isScrapingRunning ? "Scraping..." : "Start Scraping"}
-          </Button>
-          <Button onClick={noobScraper} disabled={false} className="w-full">
-            <Play className="h-4 w-4 mr-2" />
-            Scrape
           </Button>
           {!isServerSide && (
             <Button variant="outline" className="w-full">

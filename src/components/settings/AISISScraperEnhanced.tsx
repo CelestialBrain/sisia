@@ -434,37 +434,7 @@ export default function AISISScraperEnhanced() {
       });
     }
   };
-  const noobScraper = async () => {
-    try {
-      const scrapeTypes = [];
-      if (scrapeSchedules) scrapeTypes.push("schedules");
-      if (scrapeCurriculum) scrapeTypes.push("curriculum");
-      if (scrapeGrades) scrapeTypes.push("grades");
-      if (scrapeMySchedule) scrapeTypes.push("my_schedule");
-      if (scrapeMyProgram) scrapeTypes.push("my_program");
-      if (scrapeMyGrades) scrapeTypes.push("my_grades");
-      if (scrapeHoldOrders) scrapeTypes.push("hold_orders");
-      if (scrapeAccountInfo) scrapeTypes.push("account_info");
 
-      if (scrapeTypes.length === 0) {
-        toast({
-          title: "No Options Selected",
-          description: "Please select at least one scraping option.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      alert("noob!");
-    } catch (error: any) {
-      console.error("Error starting scraping:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start scraping",
-        variant: "destructive",
-      });
-    }
-  };
   const startServerScraping = async (scrapeTypes: string[]) => {
     logger.info("scraper", "Starting server-side scraping", {
       scrapeTypes,
@@ -817,15 +787,11 @@ export default function AISISScraperEnhanced() {
               </div>
             </div>
           </div>
-          aaaaaa
+
           {/* Start Button */}
           <Button onClick={startScraping} disabled={!hasCredentials || isScrapingRunning} className="w-full" size="lg">
             <Play className="w-4 h-4 mr-2" />
             Start Scraping
-          </Button>
-          <Button onClick={noobScraper} className="w-full" size="lg">
-            <Play className="w-4 h-4 mr-2" />
-            Noob Scrapper!
           </Button>
         </CardContent>
       </Card>
@@ -879,20 +845,31 @@ export default function AISISScraperEnhanced() {
                   {logs.length === 0 ? (
                     <p className="text-muted-foreground">Waiting for logs...</p>
                   ) : (
-                    logs.map((log, i) => (
-                      <div
-                        key={i}
-                        className={`${
-                          log.level === "error"
-                            ? "text-destructive"
-                            : log.level === "warn"
-                              ? "text-yellow-600"
-                              : "text-foreground"
-                        }`}
-                      >
-                        [{format(new Date(log.created_at), "HH:mm:ss")}] {log.event_message}
-                      </div>
-                    ))
+                    logs.map((log, i) => {
+                      // Extract batch information if available
+                      const metadata = log.metadata || {};
+                      const batchInfo = metadata.batchNum && metadata.totalBatches 
+                        ? `[Batch ${metadata.batchNum}/${metadata.totalBatches}]` 
+                        : '';
+                      const progressInfo = metadata.batchProgress 
+                        ? `(${metadata.batchProgress})` 
+                        : '';
+                      
+                      return (
+                        <div
+                          key={i}
+                          className={`${
+                            log.level === "error"
+                              ? "text-destructive"
+                              : log.level === "warn"
+                                ? "text-yellow-600"
+                                : "text-foreground"
+                          }`}
+                        >
+                          [{format(new Date(log.created_at), "HH:mm:ss")}] {batchInfo} {log.event_message} {progressInfo}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </ScrollArea>
