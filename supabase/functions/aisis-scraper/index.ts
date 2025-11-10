@@ -10,6 +10,7 @@ const RATE_LIMIT_DELAY = 500; // 500ms between batches
 const REQUEST_TIMEOUT = 30000; // 30 second timeout per request
 const MAX_RETRIES = 3;
 const CONCURRENT_BATCH_SIZE = 5; // Process 5 programs at once
+const DEPARTMENT_BATCH_SIZE = 3; // Process schedule departments concurrently
 
 interface ScrapeRequest {
   jobId?: string;
@@ -1415,11 +1416,136 @@ async function scrapeSchedules(
     await recordLog(serviceClient, jobId, "info", `Using term: ${applicablePeriod}`);
 
     let totalSchedules = 0;
-    const deptsToScrape = Math.min(departments.length, 5); // Limit for testing
+    const deptsToScrape = departments.length;
+    const totalBatches = Math.ceil(deptsToScrape / DEPARTMENT_BATCH_SIZE) || 1;
 
-    for (let i = 0; i < deptsToScrape; i++) {
-      const dept = departments[i];
-      // Check for pause before processing each department
+    const processDepartment = async (
+      dept: { value: string; text: string },
+      departmentIndex: number,
+      totalDepartments: number,
+    ): Promise<{ scheduleCount: number }> => {
+      const progressLabel = `${departmentIndex + 1}/${totalDepartments}`;
+
+      try {
+        console.log(`[${progressLabel}] Scraping department: ${dept.text} (${dept.value})`);
+
+        await recordLog(serviceClient, jobId, "info", `Scraping schedules for: ${dept.text}`, {
+          department: dept.text,
+          deptCode: dept.value,
+          progress: progressLabel,
+        });
+
+        // Step 1: POST with command=displaySearchForm to select department
+        console.log(`[SCHEDULE] Step 1: displaySearchForm for ${dept.value}`);
+        const formData1 = new URLSearchParams({
+          command: "displaySearchForm",
+          applicablePeriod: applicablePeriod,
+          deptCode: dept.value,
+          subjCode: "ALL",
+        });
+
+        const formHeaders = getBrowserHeaders(scheduleUrl, sanitizedCookies);
+        formHeaders["Content-Type"] = "application/x-www-form-urlencoded";
+        formHeaders["Sec-Fetch-Dest"] = "empty";
+        formHeaders["Sec-Fetch-Mode"] = "cors";
+
+        const formResponse = await fetchWithRetry(
+          scheduleUrl,
+          {
+            method: "POST",
+            headers: formHeaders,
+            body: formData1.toString(),
+          },
+          `SCHEDULE-FORM-${dept.value}`,
+        );
+
+        const formHtml = await formResponse.text();
+        console.log(`[SCHEDULE] Form loaded: ${formResponse.status} (${formHtml.length} bytes)`);
+
+        // Step 2: POST with command=displayResults to get schedule table
+        console.log(`[SCHEDULE] Step 2: displayResults for ${dept.value}`);
+        const formData2 = new URLSearchParams({
+          command: "displayResults",
+          applicablePeriod: applicablePeriod,
+          deptCode: dept.value,
+          subjCode: "ALL",
+        });
+
+        const resultsHeaders = getBrowserHeaders(scheduleUrl, sanitizedCookies);
+        resultsHeaders["Content-Type"] = "application/x-www-form-urlencoded";
+        resultsHeaders["Sec-Fetch-Dest"] = "empty";
+        resultsHeaders["Sec-Fetch-Mode"] = "cors";
+
+        const resultsResponse = await fetchWithRetry(
+          scheduleUrl,
+          {
+            method: "POST",
+            headers: resultsHeaders,
+            body: formData2.toString(),
+          },
+          `SCHEDULE-RESULTS-${dept.value}`,
+        );
+
+        const scheduleHtml = await resultsResponse.text();
+        console.log(`[SCHEDULE] Results: ${resultsResponse.status} (${scheduleHtml.length} bytes)`);
+
+        await recordLog(serviceClient, jobId, "info", `Received schedule results for ${dept.text}`, {
+          department: dept.text,
+          status: resultsResponse.status,
+          size: scheduleHtml.length,
+        });
+
+        // Parse schedule table
+        const schedules = parseScheduleTable(scheduleHtml, dept.text, applicablePeriod);
+
+        if (schedules.length > 0) {
+          const { error: insertError } = await serviceClient.from("aisis_schedules").insert(schedules);
+
+          if (insertError) {
+            console.error(`[${dept.text}] Insert error:`, insertError);
+            await recordLog(serviceClient, jobId, "error", `Failed to save schedules for ${dept.text}`, {
+              department: dept.text,
+              deptCode: dept.value,
+              error: insertError.message || insertError.details || insertError,
+            });
+            return { scheduleCount: 0 };
+          }
+
+          console.log(`[${dept.text}] Saved ${schedules.length} schedules`);
+
+          await recordLog(serviceClient, jobId, "info", `Scraped ${schedules.length} schedules from ${dept.text}`, {
+            department: dept.text,
+            schedule_count: schedules.length,
+            batchProgress: progressLabel,
+          });
+
+          await delay(RATE_LIMIT_DELAY);
+          return { scheduleCount: schedules.length };
+        } else {
+          console.warn(`[${dept.text}] No schedules found`);
+          await recordLog(serviceClient, jobId, "warn", `No schedules found for ${dept.text}`, {
+            department: dept.text,
+            deptCode: dept.value,
+          });
+          await delay(RATE_LIMIT_DELAY);
+          return { scheduleCount: 0 };
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[SCHEDULE] Error scraping ${dept.text}:`, errorMessage);
+        await recordLog(serviceClient, jobId, "error", `Failed to scrape ${dept.text}`, {
+          department: dept.text,
+          deptCode: dept.value,
+          error: errorMessage,
+        });
+        await delay(RATE_LIMIT_DELAY);
+        return { scheduleCount: 0 };
+      }
+    };
+
+    let processedDepartments = 0;
+
+    for (let batchStart = 0; batchStart < deptsToScrape; batchStart += DEPARTMENT_BATCH_SIZE) {
       if (checkControl) {
         const controlAction = await checkControl();
         if (controlAction === "pause") {
@@ -1428,107 +1554,37 @@ async function scrapeSchedules(
         }
       }
 
-      console.log(`[${i + 1}/${deptsToScrape}] Scraping department: ${dept.text} (${dept.value})`);
+      const batchDepartments = departments.slice(
+        batchStart,
+        Math.min(batchStart + DEPARTMENT_BATCH_SIZE, deptsToScrape),
+      );
+      const batchIndex = Math.floor(batchStart / DEPARTMENT_BATCH_SIZE) + 1;
 
-      await recordLog(serviceClient, jobId, "info", `Scraping schedules for: ${dept.text}`, {
-        department: dept.text,
-        deptCode: dept.value,
-        progress: `${i + 1}/${deptsToScrape}`,
+      await recordLog(serviceClient, jobId, "info", `Processing schedule batch ${batchIndex}/${totalBatches}`, {
+        batchIndex,
+        batchSize: batchDepartments.length,
+        totalBatches,
       });
 
-      // Step 1: POST with command=displaySearchForm to select department
-      console.log(`[SCHEDULE] Step 1: displaySearchForm for ${dept.value}`);
-      const formData1 = new URLSearchParams({
-        command: "displaySearchForm",
-        applicablePeriod: applicablePeriod,
-        deptCode: dept.value,
-        subjCode: "ALL",
-      });
-
-      const formHeaders = getBrowserHeaders(scheduleUrl, sanitizedCookies);
-      formHeaders["Content-Type"] = "application/x-www-form-urlencoded";
-      formHeaders["Sec-Fetch-Dest"] = "empty";
-      formHeaders["Sec-Fetch-Mode"] = "cors";
-
-      const formResponse = await fetchWithRetry(
-        scheduleUrl,
-        {
-          method: "POST",
-          headers: formHeaders,
-          body: formData1.toString(),
-        },
-        `SCHEDULE-FORM-${dept.value}`,
+      const batchResults = await Promise.all(
+        batchDepartments.map((dept, idx) =>
+          processDepartment(dept, batchStart + idx, deptsToScrape),
+        ),
       );
 
-      const formHtml = await formResponse.text();
-      console.log(`[SCHEDULE] Form loaded: ${formResponse.status} (${formHtml.length} bytes)`);
-
-      // Step 2: POST with command=displayResults to get schedule table
-      console.log(`[SCHEDULE] Step 2: displayResults for ${dept.value}`);
-      const formData2 = new URLSearchParams({
-        command: "displayResults",
-        applicablePeriod: applicablePeriod,
-        deptCode: dept.value,
-        subjCode: "ALL",
-      });
-
-      const resultsHeaders = getBrowserHeaders(scheduleUrl, sanitizedCookies);
-      resultsHeaders["Content-Type"] = "application/x-www-form-urlencoded";
-      resultsHeaders["Sec-Fetch-Dest"] = "empty";
-      resultsHeaders["Sec-Fetch-Mode"] = "cors";
-
-      const resultsResponse = await fetchWithRetry(
-        scheduleUrl,
-        {
-          method: "POST",
-          headers: resultsHeaders,
-          body: formData2.toString(),
-        },
-        `SCHEDULE-RESULTS-${dept.value}`,
-      );
-
-      const scheduleHtml = await resultsResponse.text();
-      console.log(`[SCHEDULE] Results: ${resultsResponse.status} (${scheduleHtml.length} bytes)`);
-
-      await recordLog(serviceClient, jobId, "info", `Received schedule results for ${dept.text}`, {
-        department: dept.text,
-        status: resultsResponse.status,
-        size: scheduleHtml.length,
-      });
-
-      // Parse schedule table
-      const schedules = parseScheduleTable(scheduleHtml, dept.text, applicablePeriod);
-
-      if (schedules.length > 0) {
-        // Insert schedules
-        const { error: insertError } = await serviceClient.from("aisis_schedules").insert(schedules);
-
-        if (!insertError) {
-          totalSchedules += schedules.length;
-          console.log(`[${dept.text}] Saved ${schedules.length} schedules`);
-
-          await recordLog(serviceClient, jobId, "info", `Scraped ${schedules.length} schedules from ${dept.text}`, {
-            department: dept.text,
-            schedule_count: schedules.length,
-          });
-        } else {
-          console.error(`[${dept.text}] Insert error:`, insertError);
-        }
-      } else {
-        console.warn(`[${dept.text}] No schedules found`);
+      for (const result of batchResults) {
+        processedDepartments += 1;
+        totalSchedules += result.scheduleCount;
       }
 
-      // Update progress
       await serviceClient
         .from("import_jobs")
         .update({
-          pages_scraped: i + 1,
+          pages_scraped: processedDepartments,
           total_pages: deptsToScrape,
           schedules_processed: totalSchedules,
         })
         .eq("id", jobId);
-
-      await delay(RATE_LIMIT_DELAY);
     }
 
     await recordLog(serviceClient, jobId, "info", `Schedule scraping complete: ${totalSchedules} schedules`);

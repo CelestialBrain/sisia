@@ -139,8 +139,10 @@ export default function AISISScraperEnhanced() {
   useEffect(() => {
     if (!currentJobId) return;
 
-    const channel = supabase
-      .channel("job-updates")
+    loadExistingLogs(currentJobId);
+
+    const jobChannel = supabase
+      .channel(`job-updates-${currentJobId}`)
       .on(
         "postgres_changes",
         {
@@ -196,12 +198,8 @@ export default function AISISScraperEnhanced() {
       )
       .subscribe();
 
-    // Load existing logs
-    loadExistingLogs(currentJobId);
-
-    // Subscribe to new logs
     const logsChannel = supabase
-      .channel("log-updates")
+      .channel(`log-updates-${currentJobId}`)
       .on(
         "postgres_changes",
         {
@@ -211,34 +209,26 @@ export default function AISISScraperEnhanced() {
           filter: `import_job_id=eq.${currentJobId}`,
         },
         (payload) => {
-          setLogs((prev) => [...prev, payload.new]);
-        },
-        )
-        .subscribe();
+          setLogs((prev) => {
+            const existingIds = new Set(prev.map((log) => log.id));
+            if (existingIds.has(payload.new.id)) {
+              return prev;
+            }
 
-    // Add a timeout to show initial message if no logs appear within 3 seconds
-    const initialTimeout = setTimeout(() => {
-      if (logs.length === 0) {
-        setLogs([{
-          id: 'temp-starting',
-          function_name: 'aisis-scraper',
-          level: 'INFO',
-          event_message: 'Initializing scraper',
-          details: 'Connecting to AISIS and preparing to fetch data...',
-          created_at: new Date().toISOString(),
-          import_job_id: currentJobId,
-          event_type: 'init',
-          metadata: null
-        } as any]);
-      }
-    }, 3000);
+            const nextLogs = [...prev, payload.new];
+            return nextLogs.sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+            );
+          });
+        },
+      )
+      .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      jobChannel.unsubscribe();
       logsChannel.unsubscribe();
-      clearTimeout(initialTimeout);
     };
-  }, [currentJobId, logs.length]);
+  }, [currentJobId]);
 
   // Client-side timeout detection for stuck jobs
   useEffect(() => {
@@ -308,22 +298,10 @@ export default function AISISScraperEnhanced() {
       .order("created_at", { ascending: true });
 
     if (!error && data) {
-      setLogs(data);
-      
-      // If no logs yet, add a placeholder to show scraping has started
-      if (data.length === 0) {
-        setLogs([{
-          id: 'temp-init',
-          function_name: 'aisis-scraper',
-          level: 'INFO',
-          event_message: 'Scraping job initialized',
-          details: 'Starting to fetch curriculum data...',
-          created_at: new Date().toISOString(),
-          import_job_id: jobId,
-          event_type: 'init',
-          metadata: null
-        } as any]);
-      }
+      const sortedLogs = [...data].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      setLogs(sortedLogs);
     }
   };
 
