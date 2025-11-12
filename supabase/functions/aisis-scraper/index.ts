@@ -9,7 +9,7 @@ const AISIS_BASE_URL = "https://aisis.ateneo.edu/j_aisis";
 const RATE_LIMIT_DELAY = 500; // 500ms between batches
 const REQUEST_TIMEOUT = 30000; // 30 second timeout per request
 const MAX_RETRIES = 3;
-const CONCURRENT_BATCH_SIZE = 5; // Process 5 programs at once
+const CONCURRENT_BATCH_SIZE = 3; // Process 3 programs at once (reduced to prevent timeout)
 const DEPARTMENT_BATCH_SIZE = 3; // Process schedule departments concurrently
 
 interface ScrapeRequest {
@@ -290,15 +290,19 @@ Deno.serve(async (req) => {
         scrapeAccountInfo: scrapingTypes.includes("account_info"),
       };
 
-      // Start background processing
-      processScrapingInBackground(
-        supabase,
-        resumeJobId,
-        job.user_id,
-        credentials.encrypted_username,
-        credentials.encrypted_password,
-        resumePayload,
-        scrapingTypes,
+      // ✅ PHASE 1.3: Start background processing with EdgeRuntime.waitUntil
+      (globalThis as any).EdgeRuntime?.waitUntil(
+        processScrapingInBackground(
+          supabase,
+          resumeJobId,
+          job.user_id,
+          credentials.encrypted_username,
+          credentials.encrypted_password,
+          resumePayload,
+          scrapingTypes,
+        ).catch(async (error) => {
+          console.error('[RESUME] Background processing failed:', error);
+        })
       );
 
       return new Response(
@@ -360,15 +364,28 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create import job: ${jobError?.message || "Unknown error"}`);
     }
 
-    // Start background processing with scraping types
-    processScrapingInBackground(
-      supabase,
-      job.id,
-      user.id,
-      credentials.encrypted_username,
-      credentials.encrypted_password,
-      payload,
-      scrapingTypes,
+    // ✅ PHASE 1.3: Start background processing with EdgeRuntime.waitUntil for timeout protection
+    (globalThis as any).EdgeRuntime?.waitUntil(
+      processScrapingInBackground(
+        supabase,
+        job.id,
+        user.id,
+        credentials.encrypted_username,
+        credentials.encrypted_password,
+        payload,
+        scrapingTypes,
+      ).catch(async (error) => {
+        console.error('[BACKGROUND] Background processing failed:', error);
+        try {
+          await supabase.from('import_jobs').update({
+            status: 'failed',
+            error_message: error?.message || 'Background processing error',
+            completed_at: new Date().toISOString()
+          }).eq('id', job.id);
+        } catch (updateErr) {
+          console.error('Failed to update error status:', updateErr);
+        }
+      })
     );
 
     return new Response(
@@ -995,6 +1012,11 @@ async function scrapeCurriculum(
           console.error(`[CURRICULUM] Failed to process ${program.programName}:`, result.reason);
         }
       });
+
+      // ✅ PHASE 1.1: Update progress after each batch
+      const progressPercent = Math.floor((batchEnd / programsToScrape) * 100);
+      await updateJobStatus(serviceClient, jobId, 'processing', progressPercent);
+      console.log(`[PROGRESS] Updated to ${progressPercent}% (${batchEnd}/${programsToScrape} programs)`);
 
       // Delay between batches
       if (batchEnd < programsToScrape) {
@@ -2086,55 +2108,356 @@ async function recordLog(client: any, jobId: string, level: string, message: str
   }
 }
 
-// Scrape My Class Schedule
+// ============= PHASE 4: Data Sanitization & Validation =============
+
+function sanitizeString(str: string | null | undefined): string | null {
+  if (!str) return null;
+  let clean = str.replace(/<[^>]*>/g, '');
+  clean = clean.replace(/\s+/g, ' ').trim();
+  clean = clean.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+  return clean.length > 0 ? clean : null;
+}
+
+function sanitizeCourseCode(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const cleaned = code.trim().toUpperCase();
+  const match = cleaned.match(/^([A-Z]{2,6})\s*(\d{1,3}[A-Z]?)$/);
+  return match ? `${match[1]} ${match[2]}` : cleaned;
+}
+
+function sanitizeGrade(grade: string | null | undefined): string | null {
+  if (!grade) return null;
+  const cleaned = grade.trim().toUpperCase();
+  const validGrades = /^(A|B\+|B|C\+|C|D|F|INC|W|P|S|U|NG|IP|WP|WF|[0-9]\.[0-9]{1,2})$/;
+  return validGrades.test(cleaned) ? cleaned : null;
+}
+
+function validateUnits(units: any): number | null {
+  const num = parseFloat(String(units));
+  if (isNaN(num) || num < 0 || num > 12) return null;
+  return num;
+}
+
+// ============= PHASE 2.1: Complete Personal Data Scrapers =============
+
+// Scrape My Class Schedule with parsing
 async function scrapeMySchedule(cookies: string, sessionId: string, userId: string, jobId: string, client: any) {
-  console.log("[MY_SCHEDULE] Fetching J_VMCS.do");
-  const url = "https://aisis.ateneo.edu/j_aisis/J_VMCS.do";
-  const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
-  const html = await response.text();
-  console.log(`[MY_SCHEDULE] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped my schedule (${html.length} bytes)`);
-  // await recordLog(client, jobId, "info", `schedule: ${html}`);
+  try {
+    console.log("[MY_SCHEDULE] Fetching J_VMCS.do");
+    const url = "https://aisis.ateneo.edu/j_aisis/J_VMCS.do";
+    const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
+    const html = await response.text();
+    
+    const schedules = parseMyScheduleTable(html, userId, jobId);
+    
+    if (schedules.length > 0) {
+      const { error } = await client.from('scraped_my_schedule').insert(schedules);
+      if (error) throw error;
+      
+      await recordLog(client, jobId, "info", `✓ Saved ${schedules.length} enrolled classes`);
+      return schedules.length;
+    } else {
+      await recordLog(client, jobId, "warn", "No enrolled classes found");
+      return 0;
+    }
+  } catch (error: any) {
+    await recordLog(client, jobId, "error", "Failed to scrape my schedule", { error: error.message });
+    throw error;
+  }
 }
 
-// Scrape My Program of Study
+function parseMyScheduleTable(html: string, userId: string, jobId: string): any[] {
+  const schedules: any[] = [];
+  const termMatch = html.match(/Term[:\s]*([A-Z]+\s+\d{4}-\d{4})/i);
+  const term = termMatch?.[1] || "UNKNOWN";
+  
+  const tableMatch = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+  if (!tableMatch) return schedules;
+  
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rows = tableMatch[1].match(rowRegex) || [];
+  
+  for (const row of rows) {
+    if (row.includes('<th')) continue;
+    
+    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const cells: string[] = [];
+    let cellMatch;
+    while ((cellMatch = cellRegex.exec(row)) !== null) {
+      cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+    }
+    
+    if (cells.length >= 4) {
+      schedules.push({
+        user_id: userId,
+        import_job_id: jobId,
+        course_code: sanitizeCourseCode(cells[0]),
+        section: sanitizeString(cells[1]),
+        term: term,
+        schedule: sanitizeString(cells[2]),
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  return schedules.filter(s => s.course_code);
+}
+
+// Scrape My Program of Study with parsing
 async function scrapeMyProgram(cookies: string, sessionId: string, userId: string, jobId: string, client: any) {
-  console.log("[MY_PROGRAM] Fetching J_VIPS.do");
-  const url = "https://aisis.ateneo.edu/j_aisis/J_VIPS.do";
-  const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
-  const html = await response.text();
-  console.log(`[MY_PROGRAM] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped my program (${html.length} bytes)`);
+  try {
+    console.log("[MY_PROGRAM] Fetching J_VIPS.do");
+    const url = "https://aisis.ateneo.edu/j_aisis/J_VIPS.do";
+    const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
+    const html = await response.text();
+    
+    const courses = parseMyProgramTable(html, userId, jobId);
+    
+    if (courses.length > 0) {
+      const { error } = await client.from('scraped_my_program').insert(courses);
+      if (error) throw error;
+      
+      await recordLog(client, jobId, "info", `✓ Saved ${courses.length} program courses`);
+      return courses.length;
+    } else {
+      await recordLog(client, jobId, "warn", "No program courses found");
+      return 0;
+    }
+  } catch (error: any) {
+    await recordLog(client, jobId, "error", "Failed to scrape my program", { error: error.message });
+    throw error;
+  }
 }
 
-// Scrape My Advisory Grades
+function parseMyProgramTable(html: string, userId: string, jobId: string): any[] {
+  const courses: any[] = [];
+  const tableMatch = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+  if (!tableMatch) return courses;
+  
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rows = tableMatch[1].match(rowRegex) || [];
+  
+  let currentCategory = "GENERAL";
+  let currentYear = 1;
+  let currentSemester = 1;
+  
+  for (const row of rows) {
+    const categoryMatch = row.match(/>(Core|Elective|Major|Minor|General Education)[<\s]/i);
+    if (categoryMatch) {
+      currentCategory = categoryMatch[1].toUpperCase();
+      continue;
+    }
+    
+    const yearMatch = row.match(/Year\s+(\d)/i);
+    if (yearMatch) {
+      currentYear = parseInt(yearMatch[1]);
+      continue;
+    }
+    
+    const semMatch = row.match(/Semester\s+(\d)/i);
+    if (semMatch) {
+      currentSemester = parseInt(semMatch[1]);
+      continue;
+    }
+    
+    if (row.includes('<th')) continue;
+    
+    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const cells: string[] = [];
+    let cellMatch;
+    while ((cellMatch = cellRegex.exec(row)) !== null) {
+      cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+    }
+    
+    if (cells.length >= 3 && cells[0].match(/[A-Z]{2,6}\s+\d{1,3}/)) {
+      const status = cells[cells.length - 1] || "NOT_TAKEN";
+      
+      courses.push({
+        user_id: userId,
+        import_job_id: jobId,
+        course_code: sanitizeCourseCode(cells[0]),
+        course_title: sanitizeString(cells[1]),
+        units: validateUnits(cells[2]),
+        year_level: currentYear,
+        semester: currentSemester,
+        category: currentCategory,
+        status: status.toUpperCase().replace(/\s+/g, '_'),
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  return courses.filter(c => c.course_code);
+}
+
+// Scrape My Advisory Grades with parsing
 async function scrapeMyGrades(cookies: string, sessionId: string, userId: string, jobId: string, client: any) {
-  console.log("[MY_GRADES] Fetching J_VADGR.do");
-  const url = "https://aisis.ateneo.edu/j_aisis/J_VADGR.do";
-  const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
-  const html = await response.text();
-  console.log(`[MY_GRADES] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped my grades (${html.length} bytes)`);
+  try {
+    console.log("[MY_GRADES] Fetching J_VADGR.do");
+    const url = "https://aisis.ateneo.edu/j_aisis/J_VADGR.do";
+    const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
+    const html = await response.text();
+    
+    const grades = parseMyGradesTable(html, userId, jobId);
+    
+    if (grades.length > 0) {
+      const { error } = await client.from('scraped_my_grades').insert(grades);
+      if (error) throw error;
+      
+      await recordLog(client, jobId, "info", `✓ Saved ${grades.length} advisory grades`);
+      return grades.length;
+    } else {
+      await recordLog(client, jobId, "warn", "No advisory grades found");
+      return 0;
+    }
+  } catch (error: any) {
+    await recordLog(client, jobId, "error", "Failed to scrape my grades", { error: error.message });
+    throw error;
+  }
 }
 
-// Scrape Hold Orders
+function parseMyGradesTable(html: string, userId: string, jobId: string): any[] {
+  const grades: any[] = [];
+  const tableMatch = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+  if (!tableMatch) return grades;
+  
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rows = tableMatch[1].match(rowRegex) || [];
+  
+  for (const row of rows) {
+    if (row.includes('<th')) continue;
+    
+    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const cells: string[] = [];
+    let cellMatch;
+    while ((cellMatch = cellRegex.exec(row)) !== null) {
+      cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+    }
+    
+    if (cells.length >= 5) {
+      grades.push({
+        user_id: userId,
+        import_job_id: jobId,
+        course_code: sanitizeCourseCode(cells[0]),
+        course_title: sanitizeString(cells[1]),
+        grade: sanitizeGrade(cells[2]),
+        term: sanitizeString(cells[3]),
+        units: validateUnits(cells[4]),
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  return grades.filter(g => g.course_code && g.grade);
+}
+
+// Scrape Hold Orders with parsing
 async function scrapeHoldOrders(cookies: string, sessionId: string, userId: string, jobId: string, client: any) {
-  console.log("[HOLD_ORDERS] Fetching J_VHOD.do");
-  const url = "https://aisis.ateneo.edu/j_aisis/J_VHOD.do";
-  const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
-  const html = await response.text();
-  console.log(`[HOLD_ORDERS] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped hold orders (${html.length} bytes)`);
+  try {
+    console.log("[HOLD_ORDERS] Fetching J_VHOD.do");
+    const url = "https://aisis.ateneo.edu/j_aisis/J_VHOD.do";
+    const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
+    const html = await response.text();
+    
+    const holds = parseHoldOrdersTable(html, userId, jobId);
+    
+    if (holds.length > 0) {
+      const { error } = await client.from('scraped_hold_orders').insert(holds);
+      if (error) throw error;
+      
+      await recordLog(client, jobId, "info", `✓ Saved ${holds.length} hold orders`);
+      return holds.length;
+    } else {
+      await recordLog(client, jobId, "info", "No hold orders found (good news!)");
+      return 0;
+    }
+  } catch (error: any) {
+    await recordLog(client, jobId, "error", "Failed to scrape hold orders", { error: error.message });
+    throw error;
+  }
 }
 
-// Scrape Account Info
+function parseHoldOrdersTable(html: string, userId: string, jobId: string): any[] {
+  const holds: any[] = [];
+  const tableMatch = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+  if (!tableMatch) return holds;
+  
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rows = tableMatch[1].match(rowRegex) || [];
+  
+  for (const row of rows) {
+    if (row.includes('<th')) continue;
+    
+    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const cells: string[] = [];
+    let cellMatch;
+    while ((cellMatch = cellRegex.exec(row)) !== null) {
+      cells.push(cellMatch[1].replace(/<[^>]*>/g, '').trim());
+    }
+    
+    if (cells.length >= 3) {
+      holds.push({
+        user_id: userId,
+        import_job_id: jobId,
+        hold_type: sanitizeString(cells[0]),
+        reason: sanitizeString(cells[1]),
+        office: sanitizeString(cells[2]),
+        status: cells[3] || "ACTIVE",
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  return holds;
+}
+
+// Scrape Account Info with parsing
 async function scrapeAccountInfo(cookies: string, sessionId: string, userId: string, jobId: string, client: any) {
-  console.log("[ACCOUNT_INFO] Fetching welcome.do");
-  const url = "https://aisis.ateneo.edu/j_aisis/welcome.do";
-  const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
-  const html = await response.text();
-  console.log(`[ACCOUNT_INFO] Got ${html.length} bytes`);
-  await recordLog(client, jobId, "info", `Scraped account info (${html.length} bytes)`);
+  try {
+    console.log("[ACCOUNT_INFO] Fetching welcome.do");
+    const url = "https://aisis.ateneo.edu/j_aisis/welcome.do";
+    const response = await fetchWithTimeout(url, { method: "GET", headers: { Cookie: cookies } });
+    const html = await response.text();
+    
+    const info = parseAccountInfo(html, userId, jobId);
+    
+    if (info) {
+      const { error } = await client.from('scraped_account_info').insert(info);
+      if (error) throw error;
+      
+      await recordLog(client, jobId, "info", `✓ Saved account info for ${info.full_name}`);
+      return 1;
+    } else {
+      await recordLog(client, jobId, "warn", "Could not extract account info");
+      return 0;
+    }
+  } catch (error: any) {
+    await recordLog(client, jobId, "error", "Failed to scrape account info", { error: error.message });
+    throw error;
+  }
+}
+
+function parseAccountInfo(html: string, userId: string, jobId: string): any | null {
+  const studentIdMatch = html.match(/Student\s+ID[:\s]*([A-Z0-9-]+)/i);
+  const nameMatch = html.match(/Name[:\s]*<[^>]*>([^<]+)</i) || 
+                     html.match(/Name[:\s]*([A-Z\s,]+)/i);
+  const programMatch = html.match(/Program[:\s]*<[^>]*>([^<]+)</i) ||
+                       html.match(/Program[:\s]*([A-Z\s,]+)/i);
+  const yearMatch = html.match(/Year\s+Level[:\s]*([1-5]|Graduate)/i);
+  const emailMatch = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+  
+  if (!studentIdMatch && !nameMatch) return null;
+  
+  return {
+    user_id: userId,
+    import_job_id: jobId,
+    student_id: studentIdMatch?.[1]?.trim() || null,
+    full_name: sanitizeString(nameMatch?.[1]),
+    program: sanitizeString(programMatch?.[1]),
+    year_level: yearMatch?.[1]?.trim() || null,
+    email: emailMatch?.[0]?.trim() || null,
+    created_at: new Date().toISOString()
+  };
 }
 
 function delay(ms: number): Promise<void> {

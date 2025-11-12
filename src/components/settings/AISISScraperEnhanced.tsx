@@ -275,6 +275,18 @@ export default function AISISScraperEnhanced() {
     };
   }, [currentJobId, logger]);
 
+  // ✅ PHASE 1.2: Tab visibility detection for log refresh
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentJobId) {
+        console.log('[LOGS] Tab became visible, refreshing logs');
+        loadExistingLogs(currentJobId);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentJobId]);
+
   const checkJobStatus = async (jobId: string) => {
     const { data } = await supabase.from("import_jobs").select("*").eq("id", jobId).single();
 
@@ -628,27 +640,121 @@ export default function AISISScraperEnhanced() {
     sonnerToast.info("Scraping Stopped");
   };
 
-  const downloadPartialData = async (jobId: string) => {
-    logger.info("scraper", "Downloading partial data", {
-      jobId,
-    });
-
-    const { data } = await supabase.from("import_jobs").select("partial_data").eq("id", jobId).single();
-
-    if (data?.partial_data) {
-      const blob = new Blob([JSON.stringify(data.partial_data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `partial-data-${jobId}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      logger.info("scraper", "Partial data downloaded successfully", {
-        jobId,
-        dataSize: JSON.stringify(data.partial_data).length,
-      });
+  // ✅ PHASE 3.1: Multiple Export Format Functions
+  
+  const exportAsJSON = async (jobId: string | null) => {
+    if (!jobId) {
+      toast({ title: "No Data", description: "No job ID available", variant: "destructive" });
+      return;
     }
+    
+    try {
+      const job = await supabase.from('import_jobs').select('*').eq('id', jobId).single();
+      const curriculum = await supabase.from('scraped_curriculum').select('*').eq('import_job_id', jobId);
+      const grades = await supabase.from('scraped_my_grades').select('*').eq('import_job_id', jobId);
+      
+      const exportData = {
+        metadata: { jobId, exportedAt: new Date().toISOString(), jobStatus: job.data?.status },
+        data: { curriculum: curriculum.data || [], grades: grades.data || [] },
+        statistics: { totalCurriculumCourses: curriculum.data?.length || 0, totalGrades: grades.data?.length || 0 }
+      };
+      
+      downloadFile(JSON.stringify(exportData, null, 2), `aisis-export-${jobId}.json`, 'application/json');
+      toast({ title: "Export Complete", description: "JSON file downloaded" });
+    } catch (error: any) {
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const exportAsCSV = async (jobId: string | null) => {
+    if (!jobId) return;
+    const { data } = await supabase.from('scraped_curriculum').select('*').eq('import_job_id', jobId);
+    if (data && data.length > 0) {
+      const csv = convertToCSV(data);
+      downloadFile(csv, `curriculum-${jobId}.csv`, 'text/csv');
+      toast({ title: "CSV Exported" });
+    }
+  };
+
+  const convertToCSV = (data: any[]): string => {
+    if (!data.length) return '';
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map((row: any) => 
+      Object.values(row).map((v: any) => {
+        if (v === null || v === undefined) return '';
+        const str = String(v);
+        return str.includes(',') || str.includes('"') || str.includes('\n') 
+          ? `"${str.replace(/"/g, '""')}"` 
+          : str;
+      }).join(',')
+    );
+    return [headers, ...rows].join('\n');
+  };
+
+  const exportAsHAR = async (jobId: string | null) => {
+    if (!jobId) return;
+    
+    const { data: logs } = await supabase.from('function_logs').select('*').eq('import_job_id', jobId).order('created_at', { ascending: true });
+    
+    const har = {
+      log: {
+        version: "1.2",
+        creator: { name: "AISIS Scraper", version: "2.0" },
+        entries: logs?.map((log: any) => ({
+          startedDateTime: log.created_at,
+          time: (log.metadata as any)?.duration || 0,
+          request: {
+            method: (log.metadata as any)?.method || "GET",
+            url: (log.metadata as any)?.url || 'https://aisis.ateneo.edu/j_aisis/',
+            httpVersion: "HTTP/1.1",
+            headers: []
+          },
+          response: {
+            status: 200,
+            content: { text: log.event_message }
+          }
+        })) || []
+      }
+    };
+    
+    downloadFile(JSON.stringify(har, null, 2), `aisis-har-${jobId}.har`, 'application/json');
+    toast({ title: "HAR Export Complete" });
+  };
+
+  const exportAsHTML = async (jobId: string | null) => {
+    if (!jobId) return;
+    const { data: job } = await supabase.from('import_jobs').select('*').eq('id', jobId).single();
+    const html = `<!DOCTYPE html><html><head><title>AISIS Report</title></head><body>
+<h1>Report for Job ${jobId}</h1><p>Status: ${job?.status}</p></body></html>`;
+    downloadFile(html, `aisis-report-${jobId}.html`, 'text/html');
+    toast({ title: "HTML Report Complete" });
+  };
+
+  const exportRawData = async (jobId: string | null) => {
+    if (!jobId) return;
+    const { data } = await supabase.from('scraped_curriculum').select('program_name').eq('import_job_id', jobId);
+    downloadFile(JSON.stringify(data || []), `aisis-raw-${jobId}.json`, 'application/json');
+    toast({ title: "Raw Data Exported" });
+  };
+
+  const exportRawLogs = async (jobId: string | null) => {
+    if (!jobId) return;
+    const { data: logs } = await supabase.from('function_logs').select('*').eq('import_job_id', jobId);
+    const logText = logs?.map((log: any) => `[${log.created_at}] ${log.event_message}\n`).join('') || '';
+    downloadFile(logText, `aisis-logs-${jobId}.txt`, 'text/plain');
+    toast({ title: "Logs Exported" });
+  };
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const loadJobHistory = async () => {
@@ -760,41 +866,128 @@ export default function AISISScraperEnhanced() {
               even if you close this page.
             </AlertDescription>
           </Alert>
-          {/* Scraping Options */}
+          {/* ✅ PHASE 2.2: Updated Scraping Options with Clear Labels */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Data to Scrape</Label>
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start space-x-2">
                 <Checkbox
                   id="my_schedule"
                   checked={scrapeMySchedule}
                   onCheckedChange={(checked) => setScrapeMySchedule(checked as boolean)}
+                  className="mt-1"
                 />
-                <label htmlFor="my_schedule" className="text-sm cursor-pointer">
-                  My Schedule (Your personal class schedule)
-                </label>
+                <div className="flex-1">
+                  <label htmlFor="my_schedule" className="text-sm cursor-pointer font-medium">
+                    Currently Enrolled Classes (J_VMCS.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Your current class schedule with sections and times</p>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="my_program"
+                  checked={scrapeMyProgram}
+                  onCheckedChange={(checked) => setScrapeMyProgram(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <label htmlFor="my_program" className="text-sm cursor-pointer font-medium">
+                    My Program of Study (J_VIPS.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Your curriculum checklist with taken/remaining courses</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="my_grades"
+                  checked={scrapeMyGrades}
+                  onCheckedChange={(checked) => setScrapeMyGrades(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <label htmlFor="my_grades" className="text-sm cursor-pointer font-medium">
+                    Advisory Grades (J_VADGR.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Midterm and final grades for all terms</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="grades"
+                  checked={scrapeGrades}
+                  onCheckedChange={(checked) => setScrapeGrades(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <label htmlFor="grades" className="text-sm cursor-pointer font-medium">
+                    Official Transcript (View Grades)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Complete academic transcript with GPA</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="hold_orders"
+                  checked={scrapeHoldOrders}
+                  onCheckedChange={(checked) => setScrapeHoldOrders(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <label htmlFor="hold_orders" className="text-sm cursor-pointer font-medium">
+                    Hold Orders (J_VHOD.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Financial or academic holds on your account</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="account_info"
+                  checked={scrapeAccountInfo}
+                  onCheckedChange={(checked) => setScrapeAccountInfo(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <label htmlFor="account_info" className="text-sm cursor-pointer font-medium">
+                    Student Information (welcome.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Personal info: Student ID, program, year level</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
                 <Checkbox
                   id="schedules"
                   checked={scrapeSchedules}
                   onCheckedChange={(checked) => setScrapeSchedules(checked as boolean)}
+                  className="mt-1"
                 />
-                <label htmlFor="schedules" className="text-sm cursor-pointer">
-                  Department Schedules (All available classes)
-                </label>
+                <div className="flex-1">
+                  <label htmlFor="schedules" className="text-sm cursor-pointer font-medium">
+                    Schedule of Classes (All Departments)
+                  </label>
+                  <p className="text-xs text-muted-foreground">All class schedules by department and term</p>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start space-x-2">
                 <Checkbox
                   id="curriculum"
                   checked={scrapeCurriculum}
                   onCheckedChange={(checked) => setScrapeCurriculum(checked as boolean)}
+                  className="mt-1"
                 />
-                <label htmlFor="curriculum" className="text-sm cursor-pointer">
-                  Curriculum Data (Degree program requirements)
-                </label>
+                <div className="flex-1">
+                  <label htmlFor="curriculum" className="text-sm cursor-pointer font-medium">
+                    Official Curriculum (All Programs - J_VOFC.do)
+                  </label>
+                  <p className="text-xs text-muted-foreground">Downloads curriculum for all 459 degree programs</p>
+                </div>
               </div>
             </div>
           </div>
@@ -830,10 +1023,20 @@ export default function AISISScraperEnhanced() {
                   Stop
                 </Button>
                 {currentJobId && (
-                  <Button variant="outline" size="sm" onClick={() => downloadPartialData(currentJobId)}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Partial
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => exportAsJSON(currentJobId)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      JSON
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => exportAsCSV(currentJobId)}>
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => exportAsHAR(currentJobId)}>
+                      <Code className="w-4 h-4 mr-2" />
+                      HAR
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -850,7 +1053,18 @@ export default function AISISScraperEnhanced() {
 
             {/* Live Logs */}
             <div>
-              <Label className="text-sm font-semibold">Live Logs</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-semibold">Live Logs</Label>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => currentJobId && loadExistingLogs(currentJobId)}
+                  className="h-7 text-xs"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Refresh
+                </Button>
+              </div>
               <ScrollArea className="h-[200px] mt-2 border rounded-md p-4 bg-muted/50">
                 <div className="space-y-1 font-mono text-xs">
                   {logs.length === 0 ? (
