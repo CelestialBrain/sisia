@@ -6,10 +6,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // AISIS Configuration
 const AISIS_BASE_URL = "https://aisis.ateneo.edu/j_aisis";
-const RATE_LIMIT_DELAY = 500; // 500ms between batches
+const RATE_LIMIT_DELAY = 100; // 100ms between batches (5x faster)
 const REQUEST_TIMEOUT = 30000; // 30 second timeout per request
 const MAX_RETRIES = 3;
-const CONCURRENT_BATCH_SIZE = 3; // Process 3 programs at once (reduced to prevent timeout)
+const CONCURRENT_BATCH_SIZE = 5; // Process 5 programs at once (66% faster)
 const DEPARTMENT_BATCH_SIZE = 3; // Process schedule departments concurrently
 
 interface ScrapeRequest {
@@ -909,6 +909,9 @@ async function scrapeCurriculum(
         }
       }
 
+      // ✅ PHASE 3.4: Add batch timing metrics
+      const batchStartTime = Date.now();
+      
       // Process batch concurrently
       const batchPrograms = programs.slice(batchStart, batchEnd);
       const batchResults = await Promise.allSettled(
@@ -997,11 +1000,17 @@ async function scrapeCurriculum(
       const successCount = batchResults.filter(r => r.status === 'fulfilled').length;
       const failCount = batchResults.filter(r => r.status === 'rejected').length;
       
-      console.log(`[CURRICULUM] Batch ${batchNum}/${totalBatches} complete: ${successCount} success, ${failCount} failed`);
+      // ✅ PHASE 3.4: Add batch timing metrics
+      const batchDuration = Date.now() - batchStartTime;
+      const programsPerSecond = (batchPrograms.length / (batchDuration / 1000)).toFixed(2);
+      
+      console.log(`[CURRICULUM] Batch ${batchNum}/${totalBatches} complete in ${batchDuration}ms: ${successCount} success, ${failCount} failed (${programsPerSecond} programs/sec)`);
       await recordLog(serviceClient, jobId, "info", `Batch ${batchNum}/${totalBatches} complete`, {
         successCount,
         failCount,
         batchProgress: `${batchEnd}/${programsToScrape}`,
+        duration: `${batchDuration}ms`,
+        programsPerSecond,
       });
 
       // Log individual failures
@@ -1925,25 +1934,72 @@ function getQPIValue(grade: string): number | null {
   return qpiMap[grade] ?? null;
 }
 
-// PHASE 6: Helper Functions with Timeout & Retry
+// ✅ PHASE 3: Helper Functions with Timeout & Retry (with 429 handling)
 async function fetchWithTimeout(url: string, options: any): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  let lastError: Error | null = null;
+  
+  // ✅ PHASE 3.1: Retry logic with exponential backoff for rate limiting
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Request timeout after ${REQUEST_TIMEOUT / 1000}s`);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      // ✅ PHASE 3.2: Handle HTTP 429 (Rate Limit) errors
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
+        const waitTime = Math.min(retryAfter * 1000, 10000); // Max 10 seconds
+        
+        console.warn(`[RATE LIMIT] HTTP 429 on ${url} - Attempt ${attempt}/${MAX_RETRIES}, waiting ${waitTime}ms before retry`);
+        
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue; // Retry
+        } else {
+          throw new Error(`Rate limited after ${MAX_RETRIES} attempts`);
+        }
+      }
+
+      // ✅ PHASE 3.3: Handle other error status codes
+      if (!response.ok && response.status >= 500) {
+        console.warn(`[HTTP ERROR] ${response.status} on ${url} - Attempt ${attempt}/${MAX_RETRIES}`);
+        
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff: 1s, 2s, 4s
+          const backoffTime = 1000 * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          continue; // Retry
+        } else {
+          throw new Error(`HTTP ${response.status} after ${MAX_RETRIES} attempts`);
+        }
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (error instanceof Error && error.name === "AbortError") {
+        console.error(`[TIMEOUT] Request to ${url} timed out after ${REQUEST_TIMEOUT}ms - Attempt ${attempt}/${MAX_RETRIES}`);
+      } else {
+        console.error(`[FETCH ERROR] ${error} on ${url} - Attempt ${attempt}/${MAX_RETRIES}`);
+      }
+
+      if (attempt < MAX_RETRIES) {
+        // Exponential backoff for network errors
+        const backoffTime = 1000 * Math.pow(2, attempt - 1);
+        console.log(`[RETRY] Waiting ${backoffTime}ms before retry ${attempt + 1}/${MAX_RETRIES}`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+      }
     }
-    throw error;
   }
+
+  throw lastError || new Error(`Failed to fetch ${url} after ${MAX_RETRIES} attempts`);
 }
 
 /**

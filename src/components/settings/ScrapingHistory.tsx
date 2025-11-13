@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Calendar, Clock, Database, AlertCircle, CheckCircle, XCircle, FileJson, FileCode, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, FileText, Calendar, Clock, Database, AlertCircle, CheckCircle, XCircle, FileJson, FileCode, ChevronDown, ChevronRight, Code, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -394,6 +394,49 @@ export default function ScrapingHistory() {
     }
   };
 
+  // ✅ PHASE 2: Import shared export functions
+  const handleExportJSON = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportAsJSON } = await import('@/lib/scraperExports');
+    await exportAsJSON(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
+  const handleExportCSV = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportAsCSV } = await import('@/lib/scraperExports');
+    await exportAsCSV(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
+  const handleExportHAR = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportAsHAR } = await import('@/lib/scraperExports');
+    await exportAsHAR(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
+  const handleExportHTML = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportAsHTML } = await import('@/lib/scraperExports');
+    await exportAsHTML(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
+  const handleExportRaw = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportRawData } = await import('@/lib/scraperExports');
+    await exportRawData(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
+  const handleExportLogs = async (jobId: string) => {
+    setDownloadingJobId(jobId);
+    const { exportRawLogs } = await import('@/lib/scraperExports');
+    await exportRawLogs(jobId, supabase, toast);
+    setDownloadingJobId(null);
+  };
+
   const downloadAllData = async (jobId: string) => {
     setDownloadingJobId(jobId);
     try {
@@ -773,17 +816,79 @@ export default function ScrapingHistory() {
                                         </DropdownMenu>
                                       );
                                     })}
-                                  <Separator orientation="vertical" className="h-6" />
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => downloadAllData(job.id)}
-                                    disabled={downloadingJobId === job.id}
-                                    className="gap-1"
-                                  >
-                                    <Download className="h-3 w-3" />
-                                    Download All ({Object.values(job.data_counts).reduce((a, b) => a + b, 0)})
-                                  </Button>
+                                   <Separator orientation="vertical" className="h-6" />
+                                  
+                                  {/* ✅ PHASE 2: Export Options Grid */}
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Export Data</p>
+                                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportJSON(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <FileJson className="h-3 w-3" />
+                                        JSON
+                                      </Button>
+                                      
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportCSV(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <FileSpreadsheet className="h-3 w-3" />
+                                        CSV
+                                      </Button>
+                                      
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportHAR(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <Code className="h-3 w-3" />
+                                        HAR
+                                      </Button>
+                                      
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportHTML(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        HTML
+                                      </Button>
+                                      
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportRaw(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <Database className="h-3 w-3" />
+                                        Raw
+                                      </Button>
+                                      
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExportLogs(job.id)}
+                                        disabled={downloadingJobId === job.id}
+                                        className="gap-1"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        Logs
+                                      </Button>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
