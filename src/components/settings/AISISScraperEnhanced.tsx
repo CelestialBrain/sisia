@@ -58,6 +58,7 @@ export default function AISISScraperEnhanced() {
   const [jobHistory, setJobHistory] = useState<any[]>([]);
   const [curriculumDownloads, setCurriculumDownloads] = useState<any[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [subscriptionHealthy, setSubscriptionHealthy] = useState(true);
 
   const { toast } = useToast();
   const logger = useClientLogger();
@@ -203,26 +204,43 @@ export default function AISISScraperEnhanced() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // ✅ Listen to all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "function_logs",
           filter: `import_job_id=eq.${currentJobId}`,
         },
         (payload) => {
+          console.log('[LOGS] Real-time update received:', payload.eventType);
+          const newLog = payload.new as any;
+          if (!newLog || !newLog.id) return;
+          
           setLogs((prev) => {
             const existingIds = new Set(prev.map((log) => log.id));
-            if (existingIds.has(payload.new.id)) {
+            if (existingIds.has(newLog.id)) {
               return prev;
             }
 
-            const nextLogs = [...prev, payload.new];
+            const nextLogs = [...prev, newLog];
             return nextLogs.sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
           });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[LOGS] Successfully subscribed to log updates');
+          setSubscriptionHealthy(true);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[LOGS] Channel error, attempting reconnect...');
+          setSubscriptionHealthy(false);
+          setTimeout(() => {
+            if (currentJobId) {
+              loadExistingLogs(currentJobId);
+            }
+          }, 2000);
+        }
+      });
 
     return () => {
       jobChannel.unsubscribe();
@@ -286,6 +304,22 @@ export default function AISISScraperEnhanced() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [currentJobId]);
+
+  // ✅ PHASE 1.3: Conditional polling fallback (only when subscription fails)
+  useEffect(() => {
+    if (!isScrapingRunning || !currentJobId) return;
+    
+    // Only poll if subscription is unhealthy
+    if (subscriptionHealthy) return;
+    
+    console.log('[LOGS] Subscription unhealthy, activating polling fallback');
+    const pollInterval = setInterval(() => {
+      console.log('[LOGS] Polling for new logs (fallback)');
+      loadExistingLogs(currentJobId);
+    }, 5000); // Poll every 5 seconds during active scraping
+    
+    return () => clearInterval(pollInterval);
+  }, [isScrapingRunning, currentJobId, subscriptionHealthy]);
 
   const checkJobStatus = async (jobId: string) => {
     const { data } = await supabase.from("import_jobs").select("*").eq("id", jobId).single();
@@ -640,121 +674,47 @@ export default function AISISScraperEnhanced() {
     sonnerToast.info("Scraping Stopped");
   };
 
-  // ✅ PHASE 3.1: Multiple Export Format Functions
-  
-  const exportAsJSON = async (jobId: string | null) => {
-    if (!jobId) {
-      toast({ title: "No Data", description: "No job ID available", variant: "destructive" });
-      return;
-    }
-    
-    try {
-      const job = await supabase.from('import_jobs').select('*').eq('id', jobId).single();
-      const curriculum = await supabase.from('scraped_curriculum').select('*').eq('import_job_id', jobId);
-      const grades = await supabase.from('scraped_my_grades').select('*').eq('import_job_id', jobId);
-      
-      const exportData = {
-        metadata: { jobId, exportedAt: new Date().toISOString(), jobStatus: job.data?.status },
-        data: { curriculum: curriculum.data || [], grades: grades.data || [] },
-        statistics: { totalCurriculumCourses: curriculum.data?.length || 0, totalGrades: grades.data?.length || 0 }
-      };
-      
-      downloadFile(JSON.stringify(exportData, null, 2), `aisis-export-${jobId}.json`, 'application/json');
-      toast({ title: "Export Complete", description: "JSON file downloaded" });
-    } catch (error: any) {
-      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const exportAsCSV = async (jobId: string | null) => {
+  // ✅ PHASE 2: Use shared export functions (synchronous wrappers)
+  const exportAsJSON = (jobId: string | null) => {
     if (!jobId) return;
-    const { data } = await supabase.from('scraped_curriculum').select('*').eq('import_job_id', jobId);
-    if (data && data.length > 0) {
-      const csv = convertToCSV(data);
-      downloadFile(csv, `curriculum-${jobId}.csv`, 'text/csv');
-      toast({ title: "CSV Exported" });
-    }
+    import('@/lib/scraperExports').then(({ exportAsJSON: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
-  const convertToCSV = (data: any[]): string => {
-    if (!data.length) return '';
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map((row: any) => 
-      Object.values(row).map((v: any) => {
-        if (v === null || v === undefined) return '';
-        const str = String(v);
-        return str.includes(',') || str.includes('"') || str.includes('\n') 
-          ? `"${str.replace(/"/g, '""')}"` 
-          : str;
-      }).join(',')
-    );
-    return [headers, ...rows].join('\n');
-  };
-
-  const exportAsHAR = async (jobId: string | null) => {
+  const exportAsCSV = (jobId: string | null) => {
     if (!jobId) return;
-    
-    const { data: logs } = await supabase.from('function_logs').select('*').eq('import_job_id', jobId).order('created_at', { ascending: true });
-    
-    const har = {
-      log: {
-        version: "1.2",
-        creator: { name: "AISIS Scraper", version: "2.0" },
-        entries: logs?.map((log: any) => ({
-          startedDateTime: log.created_at,
-          time: (log.metadata as any)?.duration || 0,
-          request: {
-            method: (log.metadata as any)?.method || "GET",
-            url: (log.metadata as any)?.url || 'https://aisis.ateneo.edu/j_aisis/',
-            httpVersion: "HTTP/1.1",
-            headers: []
-          },
-          response: {
-            status: 200,
-            content: { text: log.event_message }
-          }
-        })) || []
-      }
-    };
-    
-    downloadFile(JSON.stringify(har, null, 2), `aisis-har-${jobId}.har`, 'application/json');
-    toast({ title: "HAR Export Complete" });
+    import('@/lib/scraperExports').then(({ exportAsCSV: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
-  const exportAsHTML = async (jobId: string | null) => {
+  const exportAsHAR = (jobId: string | null) => {
     if (!jobId) return;
-    const { data: job } = await supabase.from('import_jobs').select('*').eq('id', jobId).single();
-    const html = `<!DOCTYPE html><html><head><title>AISIS Report</title></head><body>
-<h1>Report for Job ${jobId}</h1><p>Status: ${job?.status}</p></body></html>`;
-    downloadFile(html, `aisis-report-${jobId}.html`, 'text/html');
-    toast({ title: "HTML Report Complete" });
+    import('@/lib/scraperExports').then(({ exportAsHAR: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
-  const exportRawData = async (jobId: string | null) => {
+  const exportAsHTML = (jobId: string | null) => {
     if (!jobId) return;
-    const { data } = await supabase.from('scraped_curriculum').select('program_name').eq('import_job_id', jobId);
-    downloadFile(JSON.stringify(data || []), `aisis-raw-${jobId}.json`, 'application/json');
-    toast({ title: "Raw Data Exported" });
+    import('@/lib/scraperExports').then(({ exportAsHTML: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
-  const exportRawLogs = async (jobId: string | null) => {
+  const exportRawData = (jobId: string | null) => {
     if (!jobId) return;
-    const { data: logs } = await supabase.from('function_logs').select('*').eq('import_job_id', jobId);
-    const logText = logs?.map((log: any) => `[${log.created_at}] ${log.event_message}\n`).join('') || '';
-    downloadFile(logText, `aisis-logs-${jobId}.txt`, 'text/plain');
-    toast({ title: "Logs Exported" });
+    import('@/lib/scraperExports').then(({ exportRawData: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
-  const downloadFile = (content: string, filename: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const exportRawLogs = (jobId: string | null) => {
+    if (!jobId) return;
+    import('@/lib/scraperExports').then(({ exportRawLogs: exportFn }) => {
+      exportFn(jobId, supabase, toast);
+    });
   };
 
   const loadJobHistory = async () => {
